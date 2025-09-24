@@ -48,19 +48,12 @@ export default function Applications() {
       if (profile.role === "student") {
         query = supabase
           .from("applications")
-          .select(`
-            *,
-            opportunities(title, company_name, type, location, deadline)
-          `)
+          .select("*")
           .eq("student_id", profile.user_id);
       } else {
         query = supabase
           .from("applications")
-          .select(`
-            *,
-            opportunities(title, company_name, type, location, deadline, posted_by),
-            profiles(full_name, email, department)
-          `);
+          .select("*");
         
         if (profile.role === "faculty_mentor") {
           query = query.eq("mentor_id", profile.user_id);
@@ -70,7 +63,22 @@ export default function Applications() {
       const { data, error } = await query.order("applied_at", { ascending: false });
 
       if (error) throw error;
-      setApplications(data || []);
+      
+      // Fetch related data separately to avoid relationship issues
+      const applicationsWithData = await Promise.all((data || []).map(async (app) => {
+        const [opportunityData, profileData] = await Promise.all([
+          supabase.from("opportunities").select("title, company_name, type, location, deadline").eq("id", app.opportunity_id).single(),
+          profile.role !== "student" ? supabase.from("profiles").select("full_name, email, department").eq("user_id", app.student_id).single() : Promise.resolve({ data: null })
+        ]);
+        
+        return {
+          ...app,
+          opportunities: opportunityData.data,
+          profiles: profileData.data
+        };
+      }));
+      
+      setApplications(applicationsWithData);
     } catch (error: any) {
       toast({
         title: "Error loading applications",

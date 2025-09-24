@@ -44,15 +44,26 @@ export default function Opportunities() {
       setLoading(true);
         const { data, error } = await supabase
           .from("opportunities")
-          .select(`
-            *,
-            profiles!fk_opportunities_posted_by(full_name, email)
-          `)
+          .select("*")
         .eq("is_active", true)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setOpportunities(data || []);
+      
+      // Get application counts for each opportunity
+      const opportunitiesWithCounts = await Promise.all((data || []).map(async (opp) => {
+        const { data: appData } = await supabase
+          .from("applications")
+          .select("id, student_id, status")
+          .eq("opportunity_id", opp.id);
+        
+        return {
+          ...opp,
+          applications: appData || []
+        };
+      }));
+      
+      setOpportunities(opportunitiesWithCounts);
     } catch (error: any) {
       toast({
         title: "Error loading opportunities",
