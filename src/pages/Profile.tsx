@@ -101,8 +101,8 @@ export default function Profile() {
           ...prev,
           cgpa: data.cgpa?.toString() || "",
           bio: data.bio || "",
-          linkedin_url: data.linkedin_url || "",
-          github_url: data.github_url || "",
+          linkedin_url: "",
+          github_url: "",
           resume_url: data.resume_url || "",
           skills: data.skills || []
         }));

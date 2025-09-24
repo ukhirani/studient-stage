@@ -28,9 +28,9 @@ const departments = [
 
 const opportunityTypes = [
   "internship",
-  "full-time",
-  "part-time",
-  "contract"
+  "full_time",
+  "part_time",
+  "placement"
 ];
 
 export default function CreateOpportunity() {
@@ -66,7 +66,7 @@ export default function CreateOpportunity() {
           title: formData.title,
           company_name: formData.company_name,
           description: formData.description || null,
-          type: formData.type,
+          type: formData.type as "internship" | "full_time" | "part_time" | "placement",
           location: formData.location || null,
           stipend_amount: formData.stipend_amount ? parseInt(formData.stipend_amount) : null,
           min_cgpa: formData.min_cgpa ? parseFloat(formData.min_cgpa) : null,
