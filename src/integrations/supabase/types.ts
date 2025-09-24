@@ -14,16 +14,196 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      applications: {
+        Row: {
+          applied_at: string
+          cover_letter: string | null
+          id: string
+          opportunity_id: string
+          status: Database["public"]["Enums"]["application_status"]
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          applied_at?: string
+          cover_letter?: string | null
+          id?: string
+          opportunity_id: string
+          status?: Database["public"]["Enums"]["application_status"]
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          applied_at?: string
+          cover_letter?: string | null
+          id?: string
+          opportunity_id?: string
+          status?: Database["public"]["Enums"]["application_status"]
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      opportunities: {
+        Row: {
+          company_name: string
+          created_at: string
+          deadline: string | null
+          departments: string[] | null
+          description: string
+          id: string
+          is_active: boolean
+          location: string | null
+          min_cgpa: number | null
+          posted_by: string
+          required_skills: string[] | null
+          stipend_amount: number | null
+          title: string
+          type: Database["public"]["Enums"]["opportunity_type"]
+          updated_at: string
+        }
+        Insert: {
+          company_name: string
+          created_at?: string
+          deadline?: string | null
+          departments?: string[] | null
+          description: string
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          min_cgpa?: number | null
+          posted_by: string
+          required_skills?: string[] | null
+          stipend_amount?: number | null
+          title: string
+          type?: Database["public"]["Enums"]["opportunity_type"]
+          updated_at?: string
+        }
+        Update: {
+          company_name?: string
+          created_at?: string
+          deadline?: string | null
+          departments?: string[] | null
+          description?: string
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          min_cgpa?: number | null
+          posted_by?: string
+          required_skills?: string[] | null
+          stipend_amount?: number | null
+          title?: string
+          type?: Database["public"]["Enums"]["opportunity_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          phone: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          phone?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          phone?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      student_profiles: {
+        Row: {
+          bio: string | null
+          cgpa: number | null
+          created_at: string
+          department: string | null
+          id: string
+          resume_url: string | null
+          roll_number: string | null
+          skills: string[] | null
+          updated_at: string
+          user_id: string
+          year_of_study: number | null
+        }
+        Insert: {
+          bio?: string | null
+          cgpa?: number | null
+          created_at?: string
+          department?: string | null
+          id?: string
+          resume_url?: string | null
+          roll_number?: string | null
+          skills?: string[] | null
+          updated_at?: string
+          user_id: string
+          year_of_study?: number | null
+        }
+        Update: {
+          bio?: string | null
+          cgpa?: number | null
+          created_at?: string
+          department?: string | null
+          id?: string
+          resume_url?: string | null
+          roll_number?: string | null
+          skills?: string[] | null
+          updated_at?: string
+          user_id?: string
+          year_of_study?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
     }
     Enums: {
-      [_ in never]: never
+      application_status:
+        | "pending"
+        | "under_review"
+        | "shortlisted"
+        | "selected"
+        | "rejected"
+      opportunity_type: "internship" | "full_time" | "part_time" | "placement"
+      user_role:
+        | "student"
+        | "placement_officer"
+        | "faculty_mentor"
+        | "recruiter"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +330,21 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      application_status: [
+        "pending",
+        "under_review",
+        "shortlisted",
+        "selected",
+        "rejected",
+      ],
+      opportunity_type: ["internship", "full_time", "part_time", "placement"],
+      user_role: [
+        "student",
+        "placement_officer",
+        "faculty_mentor",
+        "recruiter",
+      ],
+    },
   },
 } as const
