@@ -8,6 +8,9 @@ import { AuthForm } from "@/components/auth/AuthForm";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import Opportunities from "@/pages/Opportunities";
+import CreateOpportunity from "@/pages/CreateOpportunity";
+import Applications from "@/pages/Applications";
+import Profile from "@/pages/Profile";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
@@ -26,8 +29,9 @@ const App = () => (
             <Route path="/" element={<AppLayout />}>
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="opportunities" element={<Opportunities />} />
-              <Route path="applications" element={<div className="p-6">Applications Page - Coming Soon</div>} />
-              <Route path="profile" element={<div className="p-6">Profile Page - Coming Soon</div>} />
+              <Route path="opportunities/new" element={<CreateOpportunity />} />
+              <Route path="applications" element={<Applications />} />
+              <Route path="profile" element={<Profile />} />
               <Route path="settings" element={<div className="p-6">Settings Page - Coming Soon</div>} />
               <Route path="students" element={<div className="p-6">Students Page - Coming Soon</div>} />
               <Route path="analytics" element={<div className="p-6">Analytics Page - Coming Soon</div>} />

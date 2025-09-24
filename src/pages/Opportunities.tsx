@@ -42,13 +42,13 @@ export default function Opportunities() {
   const fetchOpportunities = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("opportunities")
-        .select(`
-          *,
-          profiles:posted_by(full_name, email),
-          applications(id, student_id, status)
-        `)
+        const { data, error } = await supabase
+          .from("opportunities")
+          .select(`
+            *,
+            profiles!opportunities_posted_by_fkey(full_name, email),
+            applications!applications_opportunity_id_fkey(id, student_id, status)
+          `)
         .eq("is_active", true)
         .order("created_at", { ascending: false });
 
@@ -165,7 +165,10 @@ export default function Opportunities() {
           </p>
         </div>
         {(profile?.role === "placement_officer" || profile?.role === "recruiter") && (
-          <Button className="bg-gradient-primary hover:shadow-glow transition-all duration-300">
+          <Button 
+            onClick={() => window.location.href = "/opportunities/new"}
+            className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
+          >
             <Plus className="h-4 w-4 mr-2" />
             Post New Opportunity
           </Button>
