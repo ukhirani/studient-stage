@@ -46,8 +46,7 @@ export default function Opportunities() {
           .from("opportunities")
           .select(`
             *,
-            profiles!opportunities_posted_by_fkey(full_name, email),
-            applications!applications_opportunity_id_fkey(id, student_id, status)
+            profiles!fk_opportunities_posted_by(full_name, email)
           `)
         .eq("is_active", true)
         .order("created_at", { ascending: false });

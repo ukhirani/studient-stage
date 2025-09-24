@@ -50,9 +50,7 @@ export default function Applications() {
           .from("applications")
           .select(`
             *,
-            opportunities!applications_opportunity_id_fkey(
-              title, company_name, type, location, deadline
-            )
+            opportunities(title, company_name, type, location, deadline)
           `)
           .eq("student_id", profile.user_id);
       } else {
@@ -60,12 +58,8 @@ export default function Applications() {
           .from("applications")
           .select(`
             *,
-            opportunities!applications_opportunity_id_fkey(
-              title, company_name, type, location, deadline, posted_by
-            ),
-            profiles!applications_student_id_fkey(
-              full_name, email, department
-            )
+            opportunities(title, company_name, type, location, deadline, posted_by),
+            profiles(full_name, email, department)
           `);
         
         if (profile.role === "faculty_mentor") {
