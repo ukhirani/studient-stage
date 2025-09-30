@@ -1,14 +1,14 @@
-import { useOutletContext } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Clock, CheckCircle } from "lucide-react";
 
-interface ContextType {
-  user: any;
-  profile: any;
+interface VerificationBannerProps {
+  profile: {
+    role: string;
+    is_verified?: boolean;
+  } | null;
 }
 
-export function VerificationBanner() {
-  const { profile } = useOutletContext<ContextType>();
+export function VerificationBanner({ profile }: VerificationBannerProps) {
 
   if (!profile || profile.role !== "recruiter") {
     return null;

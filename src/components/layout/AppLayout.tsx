@@ -117,7 +117,7 @@ export function AppLayout() {
           {/* Main Content */}
           <main className="flex-1 overflow-auto">
             <div className="p-6">
-              <VerificationBanner />
+              <VerificationBanner profile={profile} />
               <div className="-m-6">
                 <Outlet context={{ user, profile }} />
               </div>
