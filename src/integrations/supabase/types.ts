@@ -108,39 +108,30 @@ export type Database = {
       }
       profiles: {
         Row: {
-          company_name: string | null
           created_at: string
           email: string
           full_name: string
           id: string
-          industry: string | null
-          is_verified: boolean | null
           phone: string | null
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string
           user_id: string
         }
         Insert: {
-          company_name?: string | null
           created_at?: string
           email: string
           full_name: string
           id?: string
-          industry?: string | null
-          is_verified?: boolean | null
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
           user_id: string
         }
         Update: {
-          company_name?: string | null
           created_at?: string
           email?: string
           full_name?: string
           id?: string
-          industry?: string | null
-          is_verified?: boolean | null
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
@@ -198,10 +189,6 @@ export type Database = {
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["user_role"]
-      }
-      is_verified_recruiter: {
-        Args: { _user_id: string }
-        Returns: boolean
       }
     }
     Enums: {

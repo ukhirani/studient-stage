@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+"use client"
+import { NavLink, useLocation, useNavigate } from "react-router-dom"
 import {
   Sidebar,
   SidebarContent,
@@ -9,18 +9,17 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarTrigger,
   useSidebar,
   SidebarFooter,
-} from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
-import { 
-  GraduationCap, 
-  LayoutDashboard, 
-  Briefcase, 
-  FileText, 
-  User, 
-  Settings, 
+} from "@/components/ui/sidebar"
+import { Button } from "@/components/ui/button"
+import {
+  GraduationCap,
+  LayoutDashboard,
+  Briefcase,
+  FileText,
+  User,
+  Settings,
   LogOut,
   Users,
   UserCheck,
@@ -29,13 +28,15 @@ import {
   BarChart3,
   Award,
   MessageSquare,
-} from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+  Shield,
+  Building2,
+} from "lucide-react"
+import { supabase } from "@/integrations/supabase/client"
+import { useToast } from "@/hooks/use-toast"
 
 interface SidebarProps {
-  userRole: string;
-  userName: string;
+  userRole: string
+  userName: string
 }
 
 const menuItems = {
@@ -48,17 +49,17 @@ const menuItems = {
   ],
   placement_officer: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    { title: "Opportunities", url: "/opportunities", icon: Briefcase },
-    { title: "Applications", url: "/applications", icon: FileText },
+    { title: "Company Management", url: "/companies", icon: Building2 },
+    { title: "User Management", url: "/users", icon: Shield },
     { title: "Students", url: "/students", icon: Users },
-    { title: "Verify Recruiters", url: "/verify-recruiters", icon: UserCheck },
+    { title: "Applications", url: "/applications", icon: FileText },
     { title: "Analytics", url: "/analytics", icon: BarChart3 },
-    { title: "Profile", url: "/profile", icon: User },
   ],
   faculty_mentor: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     { title: "My Students", url: "/students", icon: Users },
     { title: "Applications", url: "/applications", icon: FileText },
+    { title: "Approvals", url: "/approvals", icon: UserCheck },
     { title: "Feedback", url: "/feedback", icon: MessageSquare },
     { title: "Profile", url: "/profile", icon: User },
   ],
@@ -70,51 +71,59 @@ const menuItems = {
     { title: "Schedule", url: "/schedule", icon: Calendar },
     { title: "Profile", url: "/profile", icon: User },
   ],
-};
+}
+
+const roleDisplayNames = {
+  student: "Student",
+  placement_officer: "Admin",
+  faculty_mentor: "Faculty Mentor",
+  recruiter: "Recruiter",
+}
 
 const roleIcons = {
   student: GraduationCap,
-  placement_officer: Users,
+  placement_officer: Shield,
   faculty_mentor: UserCheck,
   recruiter: Building,
-};
+}
 
 export function AppSidebar({ userRole, userName }: SidebarProps) {
-  const { state } = useSidebar();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const currentPath = location.pathname;
-  const collapsed = state === "collapsed";
+  const { state } = useSidebar()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const { toast } = useToast()
+  const currentPath = location.pathname
+  const collapsed = state === "collapsed"
 
-  const items = menuItems[userRole as keyof typeof menuItems] || [];
-  const RoleIcon = roleIcons[userRole as keyof typeof roleIcons] || User;
+  const items = menuItems[userRole as keyof typeof menuItems] || []
+  const RoleIcon = roleIcons[userRole as keyof typeof roleIcons] || User
+  const roleDisplayName = roleDisplayNames[userRole as keyof typeof roleDisplayNames] || userRole
 
-  const isActive = (path: string) => currentPath === path;
+  const isActive = (path: string) => currentPath === path
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
-    isActive 
-      ? "bg-primary/10 text-primary font-medium border-r-2 border-primary" 
-      : "hover:bg-sidebar-accent/50 text-sidebar-foreground";
+    isActive
+      ? "bg-primary/10 text-primary font-medium border-r-2 border-primary"
+      : "hover:bg-sidebar-accent/50 text-sidebar-foreground"
 
   const handleSignOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+
       toast({
         title: "Signed out successfully",
         description: "You have been logged out of your account.",
-      });
-      
-      navigate("/auth");
+      })
+
+      navigate("/auth")
     } catch (error: any) {
       toast({
         title: "Sign out failed",
         description: error.message,
         variant: "destructive",
-      });
+      })
     }
-  };
+  }
 
   return (
     <Sidebar
@@ -147,9 +156,7 @@ export function AppSidebar({ userRole, userName }: SidebarProps) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sidebar-foreground truncate">{userName}</p>
-                <p className="text-xs text-sidebar-foreground/70 capitalize">
-                  {userRole.replace("_", " ")}
-                </p>
+                <p className="text-xs text-sidebar-foreground/70">{roleDisplayName}</p>
               </div>
             </div>
           </div>
@@ -157,9 +164,7 @@ export function AppSidebar({ userRole, userName }: SidebarProps) {
 
         {/* Navigation */}
         <SidebarGroup className="flex-1">
-          <SidebarGroupLabel className="text-sidebar-foreground/70">
-            {!collapsed ? "Navigation" : ""}
-          </SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground/70">{!collapsed ? "Navigation" : ""}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
               {items.map((item) => (
@@ -172,7 +177,7 @@ export function AppSidebar({ userRole, userName }: SidebarProps) {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-              
+
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
                   <NavLink to="/settings" className={getNavCls}>
@@ -199,5 +204,5 @@ export function AppSidebar({ userRole, userName }: SidebarProps) {
         </Button>
       </SidebarFooter>
     </Sidebar>
-  );
+  )
 }
