@@ -51,6 +51,7 @@ const menuItems = {
     { title: "Opportunities", url: "/opportunities", icon: Briefcase },
     { title: "Applications", url: "/applications", icon: FileText },
     { title: "Students", url: "/students", icon: Users },
+    { title: "Verify Recruiters", url: "/verify-recruiters", icon: UserCheck },
     { title: "Analytics", url: "/analytics", icon: BarChart3 },
     { title: "Profile", url: "/profile", icon: User },
   ],

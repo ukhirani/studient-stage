@@ -24,6 +24,8 @@ export function AuthForm() {
     password: "",
     fullName: "",
     role: "student" as "student" | "placement_officer" | "faculty_mentor" | "recruiter",
+    companyName: "",
+    industry: "",
   });
   
   const { toast } = useToast();
@@ -44,6 +46,8 @@ export function AuthForm() {
           data: {
             full_name: formData.fullName,
             role: formData.role,
+            company_name: formData.role === "recruiter" ? formData.companyName : undefined,
+            industry: formData.role === "recruiter" ? formData.industry : undefined,
           },
         },
       });
@@ -208,6 +212,43 @@ export function AuthForm() {
                     </SelectContent>
                   </Select>
                 </div>
+                
+                {formData.role === "recruiter" && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="company-name">Company Name *</Label>
+                      <Input
+                        id="company-name"
+                        type="text"
+                        placeholder="TechCorp Inc."
+                        value={formData.companyName}
+                        onChange={(e) => handleInputChange("companyName", e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="industry">Industry/Sector *</Label>
+                      <Select value={formData.industry} onValueChange={(value) => handleInputChange("industry", value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select industry" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="IT">Information Technology</SelectItem>
+                          <SelectItem value="Manufacturing">Manufacturing</SelectItem>
+                          <SelectItem value="Finance">Finance & Banking</SelectItem>
+                          <SelectItem value="Healthcare">Healthcare</SelectItem>
+                          <SelectItem value="Education">Education</SelectItem>
+                          <SelectItem value="Consulting">Consulting</SelectItem>
+                          <SelectItem value="Retail">Retail & E-commerce</SelectItem>
+                          <SelectItem value="Automotive">Automotive</SelectItem>
+                          <SelectItem value="Energy">Energy & Utilities</SelectItem>
+                          <SelectItem value="Telecommunications">Telecommunications</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                )}
                 <Button 
                   type="submit" 
                   className="w-full bg-gradient-primary hover:shadow-glow transition-all duration-300"

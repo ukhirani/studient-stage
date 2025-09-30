@@ -7,6 +7,7 @@ import { User, Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Bell, Search } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { VerificationBanner } from "@/components/VerificationBanner";
 
 export function AppLayout() {
   const [user, setUser] = useState<User | null>(null);
@@ -115,7 +116,12 @@ export function AppLayout() {
 
           {/* Main Content */}
           <main className="flex-1 overflow-auto">
-            <Outlet context={{ user, profile }} />
+            <div className="p-6">
+              <VerificationBanner />
+              <div className="-m-6">
+                <Outlet context={{ user, profile }} />
+              </div>
+            </div>
           </main>
         </div>
       </div>

@@ -11,6 +11,7 @@ import Opportunities from "@/pages/Opportunities";
 import CreateOpportunity from "@/pages/CreateOpportunity";
 import Applications from "@/pages/Applications";
 import Profile from "@/pages/Profile";
+import VerifyRecruiters from "@/pages/VerifyRecruiters";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
@@ -32,6 +33,7 @@ const App = () => (
               <Route path="opportunities/new" element={<CreateOpportunity />} />
               <Route path="applications" element={<Applications />} />
               <Route path="profile" element={<Profile />} />
+              <Route path="verify-recruiters" element={<VerifyRecruiters />} />
               <Route path="settings" element={<div className="p-6">Settings Page - Coming Soon</div>} />
               <Route path="students" element={<div className="p-6">Students Page - Coming Soon</div>} />
               <Route path="analytics" element={<div className="p-6">Analytics Page - Coming Soon</div>} />

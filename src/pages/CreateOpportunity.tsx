@@ -41,7 +41,7 @@ export default function CreateOpportunity() {
   
   const [formData, setFormData] = useState({
     title: "",
-    company_name: "",
+    company_name: profile?.company_name || "",
     description: "",
     type: "",
     location: "",
@@ -172,7 +172,11 @@ export default function CreateOpportunity() {
                   onChange={(e) => setFormData(prev => ({ ...prev, company_name: e.target.value }))}
                   placeholder="e.g. TechCorp Inc."
                   required
+                  disabled={profile?.role === "recruiter" && profile?.company_name}
                 />
+                {profile?.role === "recruiter" && profile?.company_name && (
+                  <p className="text-xs text-muted-foreground">Auto-filled from your profile</p>
+                )}
               </div>
             </div>
 
