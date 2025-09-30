@@ -17,6 +17,8 @@ import CompanyManagement from "@/pages/CompanyManagement"
 import UserManagement from "@/pages/UserManagement"
 import Index from "./pages/Index"
 import NotFound from "./pages/NotFound"
+import MyStudents from "@/pages/MyStudents"
+import Feedback from "@/pages/Feedback"
 
 const queryClient = new QueryClient()
 
@@ -40,10 +42,10 @@ const App = () => (
               <Route path="certificates" element={<Certificates />} />
               <Route path="companies" element={<CompanyManagement />} />
               <Route path="users" element={<UserManagement />} />
-              <Route path="students" element={<div className="p-6">Students Page - Coming Soon</div>} />
+              <Route path="students" element={<MyStudents />} />
+              <Route path="feedback" element={<Feedback />} />
               <Route path="analytics" element={<div className="p-6">Analytics Page - Coming Soon</div>} />
               <Route path="approvals" element={<div className="p-6">Approvals Page - Coming Soon</div>} />
-              <Route path="feedback" element={<div className="p-6">Feedback Page - Coming Soon</div>} />
               <Route path="schedule" element={<div className="p-6">Schedule Page - Coming Soon</div>} />
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
