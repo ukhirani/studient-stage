@@ -101,6 +101,7 @@ export default function MyStudents() {
             applications?.filter((app) => app.status === "shortlisted" || app.status === "interview_scheduled")
               .length || 0
           const approvedCount = applications?.filter((app) => app.status === "mentor_approved").length || 0
+          const offerCount = applications?.filter((app) => app.status === "offer_extended").length || 0
 
           return {
             ...student,
@@ -110,6 +111,7 @@ export default function MyStudents() {
             placedCount,
             interviewCount,
             approvedCount,
+            offerCount,
             placementStatus: placedCount > 0 ? "Placed" : interviewCount > 0 ? "Interning" : "Unplaced",
           }
         }),

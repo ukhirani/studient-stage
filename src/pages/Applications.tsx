@@ -74,12 +74,26 @@ export default function Applications() {
       let query
       if (profile.role === "student") {
         query = supabase.from("applications").select("*").eq("student_id", profile.user_id)
-      } else {
-        query = supabase.from("applications").select("*")
+      } else if (profile.role === "faculty_mentor") {
+        // First get assigned student IDs
+        const { data: assignments } = await supabase
+          .from("mentor_student_assignments")
+          .select("student_id")
+          .eq("mentor_id", profile.user_id)
+          .eq("is_active", true)
 
-        if (profile.role === "faculty_mentor") {
-          query = query.eq("mentor_id", profile.user_id)
+        const studentIds = assignments?.map((a) => a.student_id) || []
+
+        if (studentIds.length === 0) {
+          setApplications([])
+          setLoading(false)
+          return
         }
+
+        query = supabase.from("applications").select("*").in("student_id", studentIds)
+      } else {
+        // Placement officers and recruiters see all applications
+        query = supabase.from("applications").select("*")
       }
 
       const { data, error } = await query.order("applied_at", { ascending: false })

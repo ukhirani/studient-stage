@@ -17,7 +17,7 @@ import CompanyManagement from "@/pages/CompanyManagement"
 import UserManagement from "@/pages/UserManagement"
 import Index from "./pages/Index"
 import NotFound from "./pages/NotFound"
-import MyStudents from "@/pages/MyStudents"
+import Students from "@/pages/Students"
 import Feedback from "@/pages/Feedback"
 import VerifyRecruiters from "@/pages/VerifyRecruiters"
 import Schedule from "@/pages/Schedule"
@@ -44,7 +44,7 @@ const App = () => (
               <Route path="certificates" element={<Certificates />} />
               <Route path="companies" element={<CompanyManagement />} />
               <Route path="users" element={<UserManagement />} />
-              <Route path="students" element={<MyStudents />} />
+              <Route path="students" element={<Students />} />
               <Route path="feedback" element={<Feedback />} />
               <Route path="verify-recruiters" element={<VerifyRecruiters />} />
               <Route path="analytics" element={<div className="p-6">Analytics Page - Coming Soon</div>} />

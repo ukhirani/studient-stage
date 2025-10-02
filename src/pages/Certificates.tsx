@@ -353,7 +353,6 @@ export default function Certificates() {
                         <SelectValue placeholder="Select a company" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
                         {companies.map((company) => (
                           <SelectItem key={company.id} value={company.id}>
                             {company.name}
