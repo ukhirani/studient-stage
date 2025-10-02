@@ -1,37 +1,34 @@
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Clock, CheckCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Clock, CheckCircle } from "lucide-react"
 
 interface VerificationBannerProps {
   profile: {
-    role: string;
-    is_verified?: boolean;
-  } | null;
+    role: string
+    is_verified?: boolean
+  } | null
 }
 
 export function VerificationBanner({ profile }: VerificationBannerProps) {
-
   if (!profile || profile.role !== "recruiter") {
-    return null;
+    return null
   }
 
   if (profile.is_verified) {
     return (
-      <Alert className="bg-green-50 border-green-200 text-green-800 mb-6">
+      <Alert className="bg-green-50 border-green-200 text-green-800 mb-6 dark:bg-green-950 dark:border-green-800 dark:text-green-200">
         <CheckCircle className="h-4 w-4" />
-        <AlertDescription>
-          Your recruiter account is verified. You can now post opportunities.
-        </AlertDescription>
+        <AlertDescription>Your recruiter account is verified. You can now post opportunities.</AlertDescription>
       </Alert>
-    );
+    )
   }
 
   return (
-    <Alert className="bg-yellow-50 border-yellow-200 text-yellow-800 mb-6">
+    <Alert className="bg-yellow-50 border-yellow-200 text-yellow-800 mb-6 dark:bg-yellow-950 dark:border-yellow-800 dark:text-yellow-200">
       <Clock className="h-4 w-4" />
       <AlertDescription>
-        Your recruiter account is pending verification. A placement officer will review your registration soon. 
-        You'll be able to post opportunities once verified.
+        Your recruiter account is pending verification. A placement officer will review your registration soon. You'll
+        be able to post opportunities once verified.
       </AlertDescription>
     </Alert>
-  );
+  )
 }

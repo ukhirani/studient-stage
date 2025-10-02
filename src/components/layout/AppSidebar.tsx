@@ -30,6 +30,7 @@ import {
   MessageSquare,
   Shield,
   Building2,
+  CheckCircle,
 } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/hooks/use-toast"
@@ -51,6 +52,7 @@ const menuItems = {
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     { title: "Company Management", url: "/companies", icon: Building2 },
     { title: "User Management", url: "/users", icon: Shield },
+    { title: "Verify Recruiters", url: "/verify-recruiters", icon: CheckCircle },
     { title: "Students", url: "/students", icon: Users },
     { title: "Applications", url: "/applications", icon: FileText },
     { title: "Analytics", url: "/analytics", icon: BarChart3 },
@@ -171,7 +173,9 @@ export function AppSidebar({ userRole, userName }: SidebarProps) {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} className={getNavCls}>
-                      <item.icon className={`h-5 w-5 ${collapsed ? "mx-auto" : "mr-3"} transition-all duration-200 hover:scale-110`} />
+                      <item.icon
+                        className={`h-5 w-5 ${collapsed ? "mx-auto" : "mr-3"} transition-all duration-200 hover:scale-110`}
+                      />
                       {!collapsed && <span>{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
@@ -181,7 +185,9 @@ export function AppSidebar({ userRole, userName }: SidebarProps) {
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
                   <NavLink to="/settings" className={getNavCls}>
-                    <Settings className={`h-5 w-5 ${collapsed ? "mx-auto" : "mr-3"} transition-all duration-200 hover:scale-110`} />
+                    <Settings
+                      className={`h-5 w-5 ${collapsed ? "mx-auto" : "mr-3"} transition-all duration-200 hover:scale-110`}
+                    />
                     {!collapsed && <span>Settings</span>}
                   </NavLink>
                 </SidebarMenuButton>

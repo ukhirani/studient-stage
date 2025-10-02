@@ -19,6 +19,7 @@ import Index from "./pages/Index"
 import NotFound from "./pages/NotFound"
 import MyStudents from "@/pages/MyStudents"
 import Feedback from "@/pages/Feedback"
+import VerifyRecruiters from "@/pages/VerifyRecruiters"
 
 const queryClient = new QueryClient()
 
@@ -44,6 +45,7 @@ const App = () => (
               <Route path="users" element={<UserManagement />} />
               <Route path="students" element={<MyStudents />} />
               <Route path="feedback" element={<Feedback />} />
+              <Route path="verify-recruiters" element={<VerifyRecruiters />} />
               <Route path="analytics" element={<div className="p-6">Analytics Page - Coming Soon</div>} />
               <Route path="approvals" element={<div className="p-6">Approvals Page - Coming Soon</div>} />
               <Route path="schedule" element={<div className="p-6">Schedule Page - Coming Soon</div>} />
