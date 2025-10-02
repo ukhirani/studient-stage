@@ -1,51 +1,116 @@
-import { useState, useEffect } from "react";
-import { useOutletContext } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  GraduationCap, 
-  Building2, 
-  Save, 
+"use client"
+
+import type React from "react"
+
+import { useState, useEffect } from "react"
+import { useOutletContext } from "react-router-dom"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { supabase } from "@/integrations/supabase/client"
+import { useToast } from "@/hooks/use-toast"
+import {
+  User,
+  Mail,
+  Phone,
+  GraduationCap,
+  Building2,
+  Save,
   Plus,
   X,
   Github,
   Linkedin,
-  FileText
-} from "lucide-react";
+  FileText,
+  Award,
+  Briefcase,
+  Calendar,
+  TrendingUp,
+  CheckCircle,
+} from "lucide-react"
 
 interface ContextType {
-  user: any;
-  profile: any;
+  user: any
+  profile: any
 }
 
 const departments = [
   "Computer Science",
   "Electronics",
-  "Mechanical", 
+  "Mechanical",
   "Civil",
   "Chemical",
   "Electrical",
-  "Information Technology"
-];
+  "Information Technology",
+]
+
+// Mock career log data
+const mockCareerLog = [
+  {
+    id: "1",
+    type: "internship",
+    title: "Software Engineer Intern",
+    company: "Tech Innovations Inc",
+    start_date: "2024-05-15",
+    end_date: "2024-08-15",
+    status: "completed",
+    performance_rating: 5,
+    certificate_url: "/certificates/cert-001.pdf",
+    verification_id: "CERT-2024-AI-001",
+    feedback: "Excellent performance throughout the internship. Demonstrated strong technical skills and teamwork.",
+    skills_gained: ["React", "Node.js", "MongoDB", "Agile Development"],
+    placement_eligible: true,
+  },
+  {
+    id: "2",
+    type: "internship",
+    title: "Data Analyst Intern",
+    company: "DataCorp Analytics",
+    start_date: "2024-09-01",
+    end_date: "2024-11-30",
+    status: "completed",
+    performance_rating: 4,
+    certificate_url: "/certificates/cert-002.pdf",
+    verification_id: "CERT-2024-DA-002",
+    feedback: "Strong analytical skills and attention to detail. Successfully completed all assigned projects.",
+    skills_gained: ["Python", "SQL", "Tableau", "Data Visualization"],
+    placement_eligible: true,
+  },
+  {
+    id: "3",
+    type: "placement",
+    title: "Full Stack Developer",
+    company: "StartupXYZ",
+    offer_date: "2024-12-01",
+    joining_date: "2025-01-15",
+    status: "offer_accepted",
+    package: "12 LPA",
+    offer_letter_url: "/offers/offer-001.pdf",
+  },
+  {
+    id: "4",
+    type: "training",
+    title: "AWS Cloud Practitioner Certification",
+    organization: "Amazon Web Services",
+    completion_date: "2024-10-20",
+    status: "completed",
+    certificate_url: "/certificates/aws-cert.pdf",
+    verification_id: "AWS-2024-CP-12345",
+  },
+]
 
 export default function Profile() {
-  const { profile } = useOutletContext<ContextType>();
-  const [loading, setLoading] = useState(false);
-  const [studentProfile, setStudentProfile] = useState<any>(null);
-  const [skillInput, setSkillInput] = useState("");
-  const { toast } = useToast();
-  
+  const { profile } = useOutletContext<ContextType>()
+  const [loading, setLoading] = useState(false)
+  const [studentProfile, setStudentProfile] = useState<any>(null)
+  const [skillInput, setSkillInput] = useState("")
+  const [careerLog, setCareerLog] = useState(mockCareerLog)
+  const { toast } = useToast()
+
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
@@ -58,8 +123,8 @@ export default function Profile() {
     linkedin_url: "",
     github_url: "",
     resume_url: "",
-    skills: [] as string[]
-  });
+    skills: [] as string[],
+  })
 
   useEffect(() => {
     if (profile) {
@@ -74,53 +139,53 @@ export default function Profile() {
         linkedin_url: "",
         github_url: "",
         resume_url: "",
-        skills: []
-      });
+        skills: [],
+      })
 
       if (profile.role === "student") {
-        fetchStudentProfile();
+        fetchStudentProfile()
       }
     }
-  }, [profile]);
+  }, [profile])
 
   const fetchStudentProfile = async () => {
-    if (!profile) return;
+    if (!profile) return
 
     try {
       const { data, error } = await supabase
         .from("student_profiles")
         .select("*")
         .eq("user_id", profile.user_id)
-        .maybeSingle();
+        .maybeSingle()
 
-      if (error && error.code !== "PGRST116") throw error;
-      
+      if (error && error.code !== "PGRST116") throw error
+
       if (data) {
-        setStudentProfile(data);
-        setFormData(prev => ({
+        setStudentProfile(data)
+        setFormData((prev) => ({
           ...prev,
           cgpa: data.cgpa?.toString() || "",
           bio: data.bio || "",
           linkedin_url: "",
           github_url: "",
           resume_url: data.resume_url || "",
-          skills: data.skills || []
-        }));
+          skills: data.skills || [],
+        }))
       }
     } catch (error: any) {
       toast({
         title: "Error loading student profile",
         description: error.message,
         variant: "destructive",
-      });
+      })
     }
-  };
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!profile) return;
+    e.preventDefault()
+    if (!profile) return
 
-    setLoading(true);
+    setLoading(true)
     try {
       // Update main profile
       const { error: profileError } = await supabase
@@ -129,89 +194,122 @@ export default function Profile() {
           full_name: formData.full_name,
           contact_phone: formData.contact_phone || null,
           department: formData.department || null,
-          year: formData.year ? parseInt(formData.year) : null,
+          year: formData.year ? Number.parseInt(formData.year) : null,
         })
-        .eq("user_id", profile.user_id);
+        .eq("user_id", profile.user_id)
 
-      if (profileError) throw profileError;
+      if (profileError) throw profileError
 
       // Update student profile if user is a student
       if (profile.role === "student") {
         const studentData = {
-          cgpa: formData.cgpa ? parseFloat(formData.cgpa) : null,
+          cgpa: formData.cgpa ? Number.parseFloat(formData.cgpa) : null,
           bio: formData.bio || null,
           linkedin_url: formData.linkedin_url || null,
           github_url: formData.github_url || null,
           resume_url: formData.resume_url || null,
           skills: formData.skills.length > 0 ? formData.skills : null,
-        };
+        }
 
         if (studentProfile) {
           const { error: studentError } = await supabase
             .from("student_profiles")
             .update(studentData)
-            .eq("user_id", profile.user_id);
-          
-          if (studentError) throw studentError;
+            .eq("user_id", profile.user_id)
+
+          if (studentError) throw studentError
         } else {
-          const { error: studentError } = await supabase
-            .from("student_profiles")
-            .insert({
-              user_id: profile.user_id,
-              ...studentData
-            });
-          
-          if (studentError) throw studentError;
+          const { error: studentError } = await supabase.from("student_profiles").insert({
+            user_id: profile.user_id,
+            ...studentData,
+          })
+
+          if (studentError) throw studentError
         }
       }
 
       toast({
         title: "Profile updated!",
         description: "Your profile has been updated successfully.",
-      });
+      })
     } catch (error: any) {
       toast({
         title: "Error updating profile",
         description: error.message,
         variant: "destructive",
-      });
+      })
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const addSkill = () => {
     if (skillInput.trim() && !formData.skills.includes(skillInput.trim())) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        skills: [...prev.skills, skillInput.trim()]
-      }));
-      setSkillInput("");
+        skills: [...prev.skills, skillInput.trim()],
+      }))
+      setSkillInput("")
     }
-  };
+  }
 
   const removeSkill = (skill: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      skills: prev.skills.filter(s => s !== skill)
-    }));
-  };
+      skills: prev.skills.filter((s) => s !== skill),
+    }))
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "completed":
+        return "bg-green-100 text-green-800 border-green-200"
+      case "offer_accepted":
+        return "bg-blue-100 text-blue-800 border-blue-200"
+      case "in_progress":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200"
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200"
+    }
+  }
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case "internship":
+        return <Briefcase className="h-5 w-5" />
+      case "placement":
+        return <Building2 className="h-5 w-5" />
+      case "training":
+        return <Award className="h-5 w-5" />
+      default:
+        return <FileText className="h-5 w-5" />
+    }
+  }
+
+  // Calculate career stats
+  const completedInternships = careerLog.filter(
+    (item) => item.type === "internship" && item.status === "completed",
+  ).length
+  const placementOffers = careerLog.filter((item) => item.type === "placement").length
+  const certifications = careerLog.filter((item) => item.type === "training" && item.status === "completed").length
+  const placementEligible = careerLog.some((item) => item.type === "internship" && item.placement_eligible)
 
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-foreground">Profile</h1>
-        <p className="text-muted-foreground">
-          Manage your personal information and preferences
-        </p>
+        <p className="text-muted-foreground">Manage your personal information and preferences</p>
       </div>
 
       <Tabs defaultValue="personal" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
           <TabsTrigger value="personal">Personal Info</TabsTrigger>
           {profile?.role === "student" && (
-            <TabsTrigger value="academic">Academic & Skills</TabsTrigger>
+            <>
+              <TabsTrigger value="academic">Academic & Skills</TabsTrigger>
+              <TabsTrigger value="career">Career Log</TabsTrigger>
+            </>
           )}
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
@@ -223,11 +321,9 @@ export default function Profile() {
                 <User className="h-5 w-5 text-primary" />
                 <span>Personal Information</span>
               </CardTitle>
-              <CardDescription>
-                Update your basic profile information
-              </CardDescription>
+              <CardDescription>Update your basic profile information</CardDescription>
             </CardHeader>
-            
+
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -236,22 +332,16 @@ export default function Profile() {
                     <Input
                       id="full_name"
                       value={formData.full_name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, full_name: e.target.value }))}
                       required
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="email">Email Address *</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        disabled
-                        className="pl-10 bg-muted"
-                      />
+                      <Input id="email" type="email" value={formData.email} disabled className="pl-10 bg-muted" />
                     </div>
                     <p className="text-xs text-muted-foreground">Email cannot be changed</p>
                   </div>
@@ -266,25 +356,27 @@ export default function Profile() {
                         id="contact_phone"
                         type="tel"
                         value={formData.contact_phone}
-                        onChange={(e) => setFormData(prev => ({ ...prev, contact_phone: e.target.value }))}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, contact_phone: e.target.value }))}
                         placeholder="+91 98765 43210"
                         className="pl-10"
                       />
                     </div>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="department">Department</Label>
-                    <Select 
-                      value={formData.department} 
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, department: value }))}
+                    <Select
+                      value={formData.department}
+                      onValueChange={(value) => setFormData((prev) => ({ ...prev, department: value }))}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select department" />
                       </SelectTrigger>
                       <SelectContent>
-                        {departments.map(dept => (
-                          <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                        {departments.map((dept) => (
+                          <SelectItem key={dept} value={dept}>
+                            {dept}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -294,9 +386,9 @@ export default function Profile() {
                 {profile?.role === "student" && (
                   <div className="space-y-2">
                     <Label htmlFor="year">Academic Year</Label>
-                    <Select 
-                      value={formData.year} 
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, year: value }))}
+                    <Select
+                      value={formData.year}
+                      onValueChange={(value) => setFormData((prev) => ({ ...prev, year: value }))}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select year" />
@@ -334,11 +426,9 @@ export default function Profile() {
                   <GraduationCap className="h-5 w-5 text-primary" />
                   <span>Academic & Professional Info</span>
                 </CardTitle>
-                <CardDescription>
-                  Update your academic performance and professional profiles
-                </CardDescription>
+                <CardDescription>Update your academic performance and professional profiles</CardDescription>
               </CardHeader>
-              
+
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -351,7 +441,7 @@ export default function Profile() {
                         min="0"
                         max="10"
                         value={formData.cgpa}
-                        onChange={(e) => setFormData(prev => ({ ...prev, cgpa: e.target.value }))}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, cgpa: e.target.value }))}
                         placeholder="8.5"
                       />
                     </div>
@@ -362,7 +452,7 @@ export default function Profile() {
                     <Textarea
                       id="bio"
                       value={formData.bio}
-                      onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, bio: e.target.value }))}
                       placeholder="Tell us about yourself, your interests, and career goals..."
                       rows={4}
                     />
@@ -377,13 +467,13 @@ export default function Profile() {
                           id="linkedin_url"
                           type="url"
                           value={formData.linkedin_url}
-                          onChange={(e) => setFormData(prev => ({ ...prev, linkedin_url: e.target.value }))}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, linkedin_url: e.target.value }))}
                           placeholder="https://linkedin.com/in/yourprofile"
                           className="pl-10"
                         />
                       </div>
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="github_url">GitHub Profile</Label>
                       <div className="relative">
@@ -392,7 +482,7 @@ export default function Profile() {
                           id="github_url"
                           type="url"
                           value={formData.github_url}
-                          onChange={(e) => setFormData(prev => ({ ...prev, github_url: e.target.value }))}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, github_url: e.target.value }))}
                           placeholder="https://github.com/yourusername"
                           className="pl-10"
                         />
@@ -408,7 +498,7 @@ export default function Profile() {
                         id="resume_url"
                         type="url"
                         value={formData.resume_url}
-                        onChange={(e) => setFormData(prev => ({ ...prev, resume_url: e.target.value }))}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, resume_url: e.target.value }))}
                         placeholder="https://drive.google.com/your-resume"
                         className="pl-10"
                       />
@@ -423,7 +513,7 @@ export default function Profile() {
                         value={skillInput}
                         onChange={(e) => setSkillInput(e.target.value)}
                         placeholder="Add a skill..."
-                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
+                        onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addSkill())}
                       />
                       <Button type="button" onClick={addSkill} variant="outline">
                         <Plus className="h-4 w-4" />
@@ -431,7 +521,7 @@ export default function Profile() {
                     </div>
                     {formData.skills.length > 0 && (
                       <div className="flex flex-wrap gap-2">
-                        {formData.skills.map(skill => (
+                        {formData.skills.map((skill) => (
                           <Badge key={skill} variant="secondary" className="flex items-center space-x-1">
                             <span>{skill}</span>
                             <button
@@ -463,24 +553,195 @@ export default function Profile() {
           </TabsContent>
         )}
 
+        {profile?.role === "student" && (
+          <TabsContent value="career">
+            <div className="space-y-6">
+              {/* Career Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card className="bg-gradient-card border-border/50">
+                  <CardContent className="p-4 text-center">
+                    <Briefcase className="h-8 w-8 mx-auto mb-2 text-primary" />
+                    <div className="text-2xl font-bold text-foreground">{completedInternships}</div>
+                    <div className="text-xs text-muted-foreground">Internships</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-gradient-card border-border/50">
+                  <CardContent className="p-4 text-center">
+                    <Building2 className="h-8 w-8 mx-auto mb-2 text-green-600" />
+                    <div className="text-2xl font-bold text-foreground">{placementOffers}</div>
+                    <div className="text-xs text-muted-foreground">Placements</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-gradient-card border-border/50">
+                  <CardContent className="p-4 text-center">
+                    <Award className="h-8 w-8 mx-auto mb-2 text-blue-600" />
+                    <div className="text-2xl font-bold text-foreground">{certifications}</div>
+                    <div className="text-xs text-muted-foreground">Certifications</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-gradient-card border-border/50">
+                  <CardContent className="p-4 text-center">
+                    <TrendingUp className="h-8 w-8 mx-auto mb-2 text-yellow-600" />
+                    <div className="text-2xl font-bold text-foreground">{placementEligible ? "Yes" : "No"}</div>
+                    <div className="text-xs text-muted-foreground">Placement Eligible</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Career Log Timeline */}
+              <Card className="bg-gradient-card border-border/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <FileText className="h-5 w-5 text-primary" />
+                    <span>Career Log</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Your complete employability record - internships, placements, and certifications
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {careerLog.map((item, index) => (
+                      <div
+                        key={item.id}
+                        className="border border-border/50 rounded-lg p-4 hover:shadow-md transition-all duration-300"
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-start space-x-3 flex-1">
+                            <div className="p-2 bg-primary/10 rounded-lg">{getTypeIcon(item.type)}</div>
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-foreground">{item.title}</h3>
+                              <p className="text-sm text-muted-foreground">
+                                {item.type === "internship" || item.type === "placement"
+                                  ? item.company
+                                  : item.type === "training"
+                                    ? item.organization
+                                    : ""}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge className={getStatusColor(item.status)}>{item.status.replace("_", " ")}</Badge>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                          {item.type === "internship" && (
+                            <>
+                              <div className="flex items-center space-x-2 text-muted-foreground">
+                                <Calendar className="h-4 w-4" />
+                                <span>
+                                  {new Date(item.start_date).toLocaleDateString()} -{" "}
+                                  {new Date(item.end_date).toLocaleDateString()}
+                                </span>
+                              </div>
+                              {item.performance_rating && (
+                                <div className="flex items-center space-x-2 text-muted-foreground">
+                                  <TrendingUp className="h-4 w-4" />
+                                  <span>Rating: {item.performance_rating}/5</span>
+                                </div>
+                              )}
+                            </>
+                          )}
+
+                          {item.type === "placement" && (
+                            <>
+                              <div className="flex items-center space-x-2 text-muted-foreground">
+                                <Calendar className="h-4 w-4" />
+                                <span>Joining: {new Date(item.joining_date).toLocaleDateString()}</span>
+                              </div>
+                              {item.package && (
+                                <div className="flex items-center space-x-2 text-muted-foreground">
+                                  <TrendingUp className="h-4 w-4" />
+                                  <span>Package: {item.package}</span>
+                                </div>
+                              )}
+                            </>
+                          )}
+
+                          {item.type === "training" && (
+                            <div className="flex items-center space-x-2 text-muted-foreground">
+                              <Calendar className="h-4 w-4" />
+                              <span>Completed: {new Date(item.completion_date).toLocaleDateString()}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {item.feedback && (
+                          <div className="mt-3 bg-muted/50 p-3 rounded-lg">
+                            <p className="text-sm font-medium text-foreground mb-1">Feedback:</p>
+                            <p className="text-sm text-muted-foreground">{item.feedback}</p>
+                          </div>
+                        )}
+
+                        {item.skills_gained && item.skills_gained.length > 0 && (
+                          <div className="mt-3">
+                            <p className="text-sm font-medium text-foreground mb-2">Skills Gained:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {item.skills_gained.map((skill) => (
+                                <Badge key={skill} variant="outline">
+                                  {skill}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {item.placement_eligible && (
+                          <div className="mt-3 flex items-center space-x-2 text-green-600">
+                            <CheckCircle className="h-4 w-4" />
+                            <span className="text-sm font-medium">Eligible for Placement (PPO)</span>
+                          </div>
+                        )}
+
+                        <div className="mt-3 flex items-center space-x-2">
+                          {item.certificate_url && (
+                            <Button size="sm" variant="outline">
+                              <Award className="h-4 w-4 mr-1" />
+                              View Certificate
+                            </Button>
+                          )}
+                          {item.offer_letter_url && (
+                            <Button size="sm" variant="outline">
+                              <FileText className="h-4 w-4 mr-1" />
+                              View Offer Letter
+                            </Button>
+                          )}
+                          {item.verification_id && (
+                            <span className="text-xs text-muted-foreground font-mono">ID: {item.verification_id}</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {careerLog.length === 0 && (
+                    <div className="text-center py-12">
+                      <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-foreground mb-2">No career log entries yet</h3>
+                      <p className="text-muted-foreground">
+                        Complete internships and training programs to build your career log
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        )}
+
         <TabsContent value="settings">
           <Card className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300 animate-fade-in">
             <CardHeader>
               <CardTitle>Account Settings</CardTitle>
-              <CardDescription>
-                Manage your account preferences and settings
-              </CardDescription>
+              <CardDescription>Manage your account preferences and settings</CardDescription>
             </CardHeader>
-            
+
             <CardContent className="space-y-6">
               <div className="space-y-4">
                 <div>
                   <h3 className="text-lg font-medium text-foreground">Account Information</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Your account details and current role
-                  </p>
+                  <p className="text-sm text-muted-foreground">Your account details and current role</p>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Email</Label>
@@ -488,11 +749,7 @@ export default function Profile() {
                   </div>
                   <div className="space-y-2">
                     <Label>Role</Label>
-                    <Input 
-                      value={profile?.role?.replace('_', ' ').toUpperCase() || ""} 
-                      disabled 
-                      className="bg-muted" 
-                    />
+                    <Input value={profile?.role?.replace("_", " ").toUpperCase() || ""} disabled className="bg-muted" />
                   </div>
                 </div>
               </div>
@@ -500,11 +757,9 @@ export default function Profile() {
               <div className="space-y-4 pt-4 border-t border-border/50">
                 <div>
                   <h3 className="text-lg font-medium text-foreground">Preferences</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Customize your experience
-                  </p>
+                  <p className="text-sm text-muted-foreground">Customize your experience</p>
                 </div>
-                
+
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
@@ -517,13 +772,11 @@ export default function Profile() {
                       Configure
                     </Button>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <div>
                       <Label>Privacy Settings</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Control who can see your profile information
-                      </p>
+                      <p className="text-sm text-muted-foreground">Control who can see your profile information</p>
                     </div>
                     <Button variant="outline" size="sm">
                       Manage
@@ -536,5 +789,5 @@ export default function Profile() {
         </TabsContent>
       </Tabs>
     </div>
-  );
+  )
 }
