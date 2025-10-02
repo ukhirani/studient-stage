@@ -1,60 +1,82 @@
-import { useState, useEffect } from "react";
-import { Navigate, Outlet } from "react-router-dom";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "./AppSidebar";
-import { supabase } from "@/integrations/supabase/client";
-import { User, Session } from "@supabase/supabase-js";
-import { Button } from "@/components/ui/button";
-import { Bell, Search } from "lucide-react";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
+"use client"
+
+import { useState, useEffect } from "react"
+import { Navigate, Outlet } from "react-router-dom"
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { AppSidebar } from "./AppSidebar"
+import { supabase } from "@/integrations/supabase/client"
+import type { User, Session } from "@supabase/supabase-js"
+import { Button } from "@/components/ui/button"
+import { Bell, Search } from "lucide-react"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 
 export function AppLayout() {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null)
+  const [session, setSession] = useState<Session | null>(null)
+  const [profile, setProfile] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-      }
-    );
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      setSession(session)
+      setUser(session?.user ?? null)
+    })
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+      setSession(session)
+      setUser(session?.user ?? null)
+      setLoading(false)
+    })
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => subscription.unsubscribe()
+  }, [])
 
   useEffect(() => {
     if (user) {
       // Fetch user profile
-      setTimeout(async () => {
+      const fetchProfile = async () => {
         try {
-          const { data, error } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("user_id", user.id)
-            .maybeSingle();
+          const { data, error } = await supabase.from("profiles").select("*").eq("user_id", user.id).maybeSingle()
 
           if (error) {
-            console.error("Error fetching profile:", error);
+            console.error("Error fetching profile:", error)
           } else {
-            setProfile(data);
+            setProfile(data)
           }
         } catch (error) {
-          console.error("Error:", error);
+          console.error("Error:", error)
         }
-      }, 0);
+      }
+
+      fetchProfile()
+
+      const channel = supabase
+        .channel("profile-changes")
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "profiles",
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            console.log("[v0] Profile updated:", payload)
+            // Update the profile state with the new data
+            setProfile(payload.new)
+          },
+        )
+        .subscribe()
+
+      return () => {
+        supabase.removeChannel(channel)
+      }
     }
-  }, [user]);
+  }, [user])
 
   if (loading) {
     return (
@@ -64,11 +86,11 @@ export function AppLayout() {
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
-    );
+    )
   }
 
   if (!user || !session) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/auth" replace />
   }
 
   if (!profile) {
@@ -79,14 +101,14 @@ export function AppLayout() {
           <p className="text-muted-foreground">Setting up your profile...</p>
         </div>
       </div>
-    );
+    )
   }
 
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
         <AppSidebar userRole={profile.role} userName={profile.full_name} />
-        
+
         <div className="flex-1 flex flex-col">
           {/* Top Navigation */}
           <header className="h-16 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
@@ -102,7 +124,7 @@ export function AppLayout() {
                   />
                 </div>
               </div>
-              
+
               <div className="flex items-center space-x-4">
                 <Button variant="ghost" size="icon" className="relative">
                   <Bell className="h-5 w-5" />
@@ -120,5 +142,5 @@ export function AppLayout() {
         </div>
       </div>
     </SidebarProvider>
-  );
+  )
 }
