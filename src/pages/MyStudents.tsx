@@ -30,6 +30,7 @@ import {
   Eye,
   Award,
   TrendingUp,
+  Clock,
 } from "lucide-react"
 
 interface ContextType {
@@ -58,11 +59,27 @@ export default function MyStudents() {
     try {
       setLoading(true)
 
-      // Fetch all student profiles
+      const { data: assignments, error: assignmentError } = await supabase
+        .from("mentor_student_assignments")
+        .select("student_id")
+        .eq("mentor_id", profile.user_id)
+        .eq("is_active", true)
+
+      if (assignmentError) throw assignmentError
+
+      const studentIds = assignments?.map((a) => a.student_id) || []
+
+      if (studentIds.length === 0) {
+        setStudents([])
+        setLoading(false)
+        return
+      }
+
+      // Fetch student profiles for assigned students
       const { data: studentProfiles, error: profileError } = await supabase
         .from("profiles")
         .select("*")
-        .eq("role", "student")
+        .in("user_id", studentIds)
         .order("full_name")
 
       if (profileError) throw profileError
@@ -75,17 +92,24 @@ export default function MyStudents() {
             .select("*, opportunities(title, company_name, type)")
             .eq("student_id", student.user_id)
 
-          const placedCount = applications?.filter((app) => app.status === "selected").length || 0
-          const interviewCount = applications?.filter((app) => app.status === "shortlisted").length || 0
-          const offerCount = applications?.filter((app) => app.status === "under_review").length || 0
+          const pendingMentorApproval =
+            applications?.filter((app) => app.status === "pending" || app.status === "mentor_pending").length || 0
+
+          const placedCount =
+            applications?.filter((app) => app.status === "selected" || app.status === "placed").length || 0
+          const interviewCount =
+            applications?.filter((app) => app.status === "shortlisted" || app.status === "interview_scheduled")
+              .length || 0
+          const approvedCount = applications?.filter((app) => app.status === "mentor_approved").length || 0
 
           return {
             ...student,
             applications: applications || [],
             applicationCount: applications?.length || 0,
+            pendingMentorApproval,
             placedCount,
             interviewCount,
-            offerCount,
+            approvedCount,
             placementStatus: placedCount > 0 ? "Placed" : interviewCount > 0 ? "Interning" : "Unplaced",
           }
         }),
@@ -187,7 +211,7 @@ export default function MyStudents() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300 animate-fade-in">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -199,7 +223,26 @@ export default function MyStudents() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300 animate-fade-in" style={{animationDelay: "0.1s"}}>
+        <Card
+          className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300 animate-fade-in"
+          style={{ animationDelay: "0.1s" }}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Pending Approval</p>
+                <p className="text-2xl font-bold text-yellow-600">
+                  {students.reduce((sum, s) => sum + s.pendingMentorApproval, 0)}
+                </p>
+              </div>
+              <Clock className="h-8 w-8 text-yellow-600 animate-pulse" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card
+          className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300 animate-fade-in"
+          style={{ animationDelay: "0.2s" }}
+        >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -212,7 +255,10 @@ export default function MyStudents() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300 animate-fade-in" style={{animationDelay: "0.2s"}}>
+        <Card
+          className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300 animate-fade-in"
+          style={{ animationDelay: "0.3s" }}
+        >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -225,7 +271,10 @@ export default function MyStudents() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300 animate-fade-in" style={{animationDelay: "0.3s"}}>
+        <Card
+          className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300 animate-fade-in"
+          style={{ animationDelay: "0.4s" }}
+        >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -241,7 +290,10 @@ export default function MyStudents() {
       </div>
 
       {/* Filters */}
-      <Card className="bg-gradient-card border-border/50 hover:shadow-md transition-all duration-300 animate-fade-in" style={{animationDelay: "0.4s"}}>
+      <Card
+        className="bg-gradient-card border-border/50 hover:shadow-md transition-all duration-300 animate-fade-in"
+        style={{ animationDelay: "0.4s" }}
+      >
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Search className="h-5 w-5 text-primary" />
@@ -302,7 +354,7 @@ export default function MyStudents() {
           <Card
             key={student.user_id}
             className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300 animate-fade-in"
-            style={{animationDelay: `${0.5 + index * 0.05}s`}}
+            style={{ animationDelay: `${0.5 + index * 0.05}s` }}
           >
             <CardHeader>
               <div className="flex items-start justify-between">
@@ -315,7 +367,14 @@ export default function MyStudents() {
                     <CardDescription>{student.department}</CardDescription>
                   </div>
                 </div>
-                <Badge className={getStatusColor(student.placementStatus)}>{student.placementStatus}</Badge>
+                <div className="flex flex-col gap-1">
+                  <Badge className={getStatusColor(student.placementStatus)}>{student.placementStatus}</Badge>
+                  {student.pendingMentorApproval > 0 && (
+                    <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
+                      {student.pendingMentorApproval} Pending
+                    </Badge>
+                  )}
+                </div>
               </div>
             </CardHeader>
 

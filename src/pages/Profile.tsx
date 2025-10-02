@@ -108,7 +108,8 @@ export default function Profile() {
   const [loading, setLoading] = useState(false)
   const [studentProfile, setStudentProfile] = useState<any>(null)
   const [skillInput, setSkillInput] = useState("")
-  const [careerLog, setCareerLog] = useState(mockCareerLog)
+  const [careerLog, setCareerLog] = useState<any[]>([])
+  const [careerLogLoading, setCareerLogLoading] = useState(false)
   const { toast } = useToast()
 
   const [formData, setFormData] = useState({
@@ -144,6 +145,7 @@ export default function Profile() {
 
       if (profile.role === "student") {
         fetchStudentProfile()
+        fetchCareerLog()
       }
     }
   }, [profile])
@@ -178,6 +180,52 @@ export default function Profile() {
         description: error.message,
         variant: "destructive",
       })
+    }
+  }
+
+  const fetchCareerLog = async () => {
+    if (!profile) return
+
+    try {
+      setCareerLogLoading(true)
+
+      const { data, error } = await supabase
+        .from("career_log")
+        .select("*")
+        .eq("student_id", profile.user_id)
+        .order("start_date", { ascending: false })
+
+      if (error) throw error
+
+      const careerLogWithData = await Promise.all(
+        (data || []).map(async (entry) => {
+          const [companyData, certificateData] = await Promise.all([
+            entry.company_id
+              ? supabase.from("companies").select("name").eq("id", entry.company_id).single()
+              : Promise.resolve({ data: null }),
+            entry.certificate_id
+              ? supabase.from("certificates").select("certificate_url, title").eq("id", entry.certificate_id).single()
+              : Promise.resolve({ data: null }),
+          ])
+
+          return {
+            ...entry,
+            company: companyData.data,
+            certificate: certificateData.data,
+          }
+        }),
+      )
+
+      setCareerLog(careerLogWithData)
+    } catch (error: any) {
+      console.error("[v0] Error loading career log:", error)
+      toast({
+        title: "Error loading career log",
+        description: error.message,
+        variant: "destructive",
+      })
+    } finally {
+      setCareerLogLoading(false)
     }
   }
 
@@ -264,10 +312,10 @@ export default function Profile() {
     switch (status) {
       case "completed":
         return "bg-green-100 text-green-800 border-green-200"
-      case "offer_accepted":
+      case "ongoing":
         return "bg-blue-100 text-blue-800 border-blue-200"
-      case "in_progress":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200"
+      case "cancelled":
+        return "bg-gray-100 text-gray-800 border-gray-200"
       default:
         return "bg-gray-100 text-gray-800 border-gray-200"
     }
@@ -280,6 +328,8 @@ export default function Profile() {
       case "placement":
         return <Building2 className="h-5 w-5" />
       case "training":
+        return <Award className="h-5 w-5" />
+      case "achievement":
         return <Award className="h-5 w-5" />
       default:
         return <FileText className="h-5 w-5" />
@@ -600,120 +650,72 @@ export default function Profile() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {careerLog.map((item, index) => (
-                      <div
-                        key={item.id}
-                        className="border border-border/50 rounded-lg p-4 hover:shadow-md transition-all duration-300"
-                      >
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-start space-x-3 flex-1">
-                            <div className="p-2 bg-primary/10 rounded-lg">{getTypeIcon(item.type)}</div>
-                            <div className="flex-1">
-                              <h3 className="font-semibold text-foreground">{item.title}</h3>
-                              <p className="text-sm text-muted-foreground">
-                                {item.type === "internship" || item.type === "placement"
-                                  ? item.company
-                                  : item.type === "training"
-                                    ? item.organization
-                                    : ""}
-                              </p>
+                  {careerLogLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="text-center space-y-4">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                        <p className="text-muted-foreground">Loading career log...</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {careerLog.map((item, index) => (
+                        <div
+                          key={item.id}
+                          className="border border-border/50 rounded-lg p-4 hover:shadow-md transition-all duration-300"
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-start space-x-3 flex-1">
+                              <div className="p-2 bg-primary/10 rounded-lg">{getTypeIcon(item.type)}</div>
+                              <div className="flex-1">
+                                <h3 className="font-semibold text-foreground">{item.title}</h3>
+                                {item.company && <p className="text-sm text-muted-foreground">{item.company.name}</p>}
+                              </div>
                             </div>
+                            <Badge className={getStatusColor(item.status)} variant="outline">
+                              {item.status}
+                            </Badge>
                           </div>
-                          <Badge className={getStatusColor(item.status)}>{item.status.replace("_", " ")}</Badge>
-                        </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                          {item.type === "internship" && (
-                            <>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                            {item.start_date && (
                               <div className="flex items-center space-x-2 text-muted-foreground">
                                 <Calendar className="h-4 w-4" />
                                 <span>
-                                  {new Date(item.start_date).toLocaleDateString()} -{" "}
-                                  {new Date(item.end_date).toLocaleDateString()}
+                                  {new Date(item.start_date).toLocaleDateString()}
+                                  {item.end_date && ` - ${new Date(item.end_date).toLocaleDateString()}`}
                                 </span>
                               </div>
-                              {item.performance_rating && (
-                                <div className="flex items-center space-x-2 text-muted-foreground">
-                                  <TrendingUp className="h-4 w-4" />
-                                  <span>Rating: {item.performance_rating}/5</span>
-                                </div>
-                              )}
-                            </>
-                          )}
+                            )}
+                          </div>
 
-                          {item.type === "placement" && (
-                            <>
-                              <div className="flex items-center space-x-2 text-muted-foreground">
-                                <Calendar className="h-4 w-4" />
-                                <span>Joining: {new Date(item.joining_date).toLocaleDateString()}</span>
-                              </div>
-                              {item.package && (
-                                <div className="flex items-center space-x-2 text-muted-foreground">
-                                  <TrendingUp className="h-4 w-4" />
-                                  <span>Package: {item.package}</span>
-                                </div>
-                              )}
-                            </>
-                          )}
-
-                          {item.type === "training" && (
-                            <div className="flex items-center space-x-2 text-muted-foreground">
-                              <Calendar className="h-4 w-4" />
-                              <span>Completed: {new Date(item.completion_date).toLocaleDateString()}</span>
+                          {item.description && (
+                            <div className="mt-3 bg-muted/50 p-3 rounded-lg">
+                              <p className="text-sm text-muted-foreground">{item.description}</p>
                             </div>
                           )}
-                        </div>
 
-                        {item.feedback && (
-                          <div className="mt-3 bg-muted/50 p-3 rounded-lg">
-                            <p className="text-sm font-medium text-foreground mb-1">Feedback:</p>
-                            <p className="text-sm text-muted-foreground">{item.feedback}</p>
-                          </div>
-                        )}
-
-                        {item.skills_gained && item.skills_gained.length > 0 && (
-                          <div className="mt-3">
-                            <p className="text-sm font-medium text-foreground mb-2">Skills Gained:</p>
-                            <div className="flex flex-wrap gap-2">
-                              {item.skills_gained.map((skill) => (
-                                <Badge key={skill} variant="outline">
-                                  {skill}
-                                </Badge>
-                              ))}
+                          {item.placement_eligible && (
+                            <div className="mt-3 flex items-center space-x-2 text-green-600">
+                              <CheckCircle className="h-4 w-4" />
+                              <span className="text-sm font-medium">Eligible for Placement (PPO)</span>
                             </div>
-                          </div>
-                        )}
+                          )}
 
-                        {item.placement_eligible && (
-                          <div className="mt-3 flex items-center space-x-2 text-green-600">
-                            <CheckCircle className="h-4 w-4" />
-                            <span className="text-sm font-medium">Eligible for Placement (PPO)</span>
+                          <div className="mt-3 flex items-center space-x-2">
+                            {item.certificate && (
+                              <Button size="sm" variant="outline">
+                                <Award className="h-4 w-4 mr-1" />
+                                View Certificate
+                              </Button>
+                            )}
                           </div>
-                        )}
-
-                        <div className="mt-3 flex items-center space-x-2">
-                          {item.certificate_url && (
-                            <Button size="sm" variant="outline">
-                              <Award className="h-4 w-4 mr-1" />
-                              View Certificate
-                            </Button>
-                          )}
-                          {item.offer_letter_url && (
-                            <Button size="sm" variant="outline">
-                              <FileText className="h-4 w-4 mr-1" />
-                              View Offer Letter
-                            </Button>
-                          )}
-                          {item.verification_id && (
-                            <span className="text-xs text-muted-foreground font-mono">ID: {item.verification_id}</span>
-                          )}
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
 
-                  {careerLog.length === 0 && (
+                  {!careerLogLoading && careerLog.length === 0 && (
                     <div className="text-center py-12">
                       <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-foreground mb-2">No career log entries yet</h3>

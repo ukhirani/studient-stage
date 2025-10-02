@@ -1,11 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useOutletContext } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Dialog,
@@ -16,177 +18,190 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
-import {
-  Award,
-  Search,
-  Filter,
-  Download,
-  CheckCircle,
-  Clock,
-  AlertCircle,
-  Upload,
-  Eye,
-  QrCode,
-  Calendar,
-  Building2,
-  User,
-} from "lucide-react"
+import { supabase } from "@/integrations/supabase/client"
+import { Award, Search, Filter, Download, CheckCircle, Upload, Eye, QrCode, Building2, User, Plus } from "lucide-react"
 
 interface ContextType {
   user: any
   profile: any
 }
 
-// Mock data - in production, this would come from Supabase
-const mockCertificates = [
-  {
-    id: "1",
-    title: "AI Guru – Internship Training",
-    issuing_authority: "Dr. Sarah Johnson (Faculty Mentor)",
-    status: "issued",
-    date_issued: "2024-08-15",
-    completion_date: "2024-08-10",
-    type: "internship",
-    company: "Tech Innovations Inc",
-    duration: "3 months",
-    mentor: "Dr. Sarah Johnson",
-    feedback: "Excellent performance throughout the internship. Demonstrated strong technical skills and teamwork.",
-    certificate_url: "/certificates/cert-001.pdf",
-    verification_id: "CERT-2024-AI-001",
-  },
-  {
-    id: "2",
-    title: "Full Stack Development Workshop",
-    issuing_authority: "Placement Cell",
-    status: "approved",
-    date_issued: "2024-09-20",
-    completion_date: "2024-09-15",
-    type: "training",
-    company: "Campus Connect Hub",
-    duration: "2 weeks",
-    mentor: "Prof. Michael Chen",
-    feedback: "Successfully completed all modules with distinction.",
-    certificate_url: "/certificates/cert-002.pdf",
-    verification_id: "CERT-2024-FS-002",
-  },
-  {
-    id: "3",
-    title: "Data Science Internship Certificate",
-    issuing_authority: "DataCorp Analytics",
-    status: "under_review",
-    date_issued: null,
-    completion_date: "2024-11-30",
-    type: "internship",
-    company: "DataCorp Analytics",
-    duration: "6 months",
-    mentor: "Jane Smith (Recruiter)",
-    feedback: null,
-    certificate_url: null,
-    verification_id: null,
-  },
-  {
-    id: "4",
-    title: "Placement Offer - Software Engineer",
-    issuing_authority: "StartupXYZ HR",
-    status: "pending",
-    date_issued: null,
-    completion_date: "2024-12-01",
-    type: "placement",
-    company: "StartupXYZ",
-    duration: "Full-time",
-    mentor: "Placement Officer",
-    feedback: null,
-    certificate_url: null,
-    verification_id: null,
-  },
-]
-
 export default function Certificates() {
   const { profile } = useOutletContext<ContextType>()
-  const [certificates, setCertificates] = useState(mockCertificates)
+  const [certificates, setCertificates] = useState<any[]>([])
+  const [applications, setApplications] = useState<any[]>([])
+  const [companies, setCompanies] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
   const [selectedCertificate, setSelectedCertificate] = useState<any>(null)
   const [showUploadDialog, setShowUploadDialog] = useState(false)
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
   const { toast } = useToast()
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "issued":
-        return <CheckCircle className="h-4 w-4" />
-      case "approved":
-        return <CheckCircle className="h-4 w-4" />
-      case "under_review":
-        return <Clock className="h-4 w-4" />
-      case "pending":
-        return <AlertCircle className="h-4 w-4" />
-      default:
-        return <Clock className="h-4 w-4" />
-    }
-  }
-
-  const getStatusVariant = (status: string) => {
-    switch (status) {
-      case "issued":
-        return "default" as const
-      case "approved":
-        return "default" as const
-      case "under_review":
-        return "secondary" as const
-      case "pending":
-        return "outline" as const
-      default:
-        return "secondary" as const
-    }
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "issued":
-        return "bg-green-100 text-green-800 border-green-200"
-      case "approved":
-        return "bg-blue-100 text-blue-800 border-blue-200"
-      case "under_review":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200"
-      case "pending":
-        return "bg-gray-100 text-gray-800 border-gray-200"
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200"
-    }
-  }
-
-  const filteredCertificates = certificates.filter((cert) => {
-    const matchesSearch =
-      cert.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cert.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cert.issuing_authority.toLowerCase().includes(searchTerm.toLowerCase())
-
-    const matchesStatus = statusFilter === "all" || cert.status === statusFilter
-    const matchesType = typeFilter === "all" || cert.type === typeFilter
-
-    return matchesSearch && matchesStatus && matchesType
+  const [newCertificate, setNewCertificate] = useState({
+    student_id: "",
+    application_id: "",
+    company_id: "",
+    certificate_type: "internship",
+    title: "",
+    description: "",
+    issue_date: new Date().toISOString().split("T")[0],
+    certificate_url: "",
   })
 
-  const certificatesByStatus = {
-    issued: certificates.filter((c) => c.status === "issued").length,
-    approved: certificates.filter((c) => c.status === "approved").length,
-    under_review: certificates.filter((c) => c.status === "under_review").length,
-    pending: certificates.filter((c) => c.status === "pending").length,
+  useEffect(() => {
+    fetchCertificates()
+    if (profile?.role === "placement_officer" || profile?.role === "recruiter") {
+      fetchCompletedApplications()
+      fetchCompanies()
+    }
+  }, [profile])
+
+  const fetchCertificates = async () => {
+    if (!profile) return
+
+    try {
+      setLoading(true)
+
+      let query = supabase.from("certificates").select("*")
+
+      if (profile.role === "student") {
+        query = query.eq("student_id", profile.user_id)
+      }
+
+      const { data, error } = await query.order("issue_date", { ascending: false })
+
+      if (error) throw error
+
+      // Fetch related data for each certificate
+      const certificatesWithData = await Promise.all(
+        (data || []).map(async (cert) => {
+          const [studentData, companyData] = await Promise.all([
+            supabase.from("profiles").select("full_name, email").eq("user_id", cert.student_id).single(),
+            cert.company_id
+              ? supabase.from("companies").select("name").eq("id", cert.company_id).single()
+              : Promise.resolve({ data: null }),
+          ])
+
+          return {
+            ...cert,
+            student: studentData.data,
+            company: companyData.data,
+          }
+        }),
+      )
+
+      setCertificates(certificatesWithData)
+    } catch (error: any) {
+      console.error("[v0] Error loading certificates:", error)
+      toast({
+        title: "Error loading certificates",
+        description: error.message,
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleDownload = (certificateId: string) => {
-    toast({
-      title: "Downloading certificate",
-      description: "Your certificate is being downloaded...",
-    })
+  const fetchCompletedApplications = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("applications")
+        .select("id, student_id, opportunity_id")
+        .in("status", ["internship_completed", "placed"])
+
+      if (error) throw error
+
+      const applicationsWithData = await Promise.all(
+        (data || []).map(async (app) => {
+          const [opportunityData, profileData] = await Promise.all([
+            supabase.from("opportunities").select("title, company_name").eq("id", app.opportunity_id).single(),
+            supabase.from("profiles").select("full_name").eq("user_id", app.student_id).single(),
+          ])
+
+          return {
+            ...app,
+            opportunity: opportunityData.data,
+            student: profileData.data,
+          }
+        }),
+      )
+
+      setApplications(applicationsWithData)
+    } catch (error: any) {
+      console.error("[v0] Error fetching applications:", error)
+    }
   }
 
-  const handleVerify = (verificationId: string) => {
-    toast({
-      title: "Verification ID",
-      description: `Certificate ID: ${verificationId}`,
-    })
+  const fetchCompanies = async () => {
+    try {
+      const { data, error } = await supabase.from("companies").select("id, name").eq("status", "verified")
+
+      if (error) throw error
+      setCompanies(data || [])
+    } catch (error: any) {
+      console.error("[v0] Error fetching companies:", error)
+    }
+  }
+
+  const handleCreateCertificate = async () => {
+    try {
+      if (!newCertificate.student_id || !newCertificate.title || !newCertificate.certificate_type) {
+        toast({
+          title: "Missing required fields",
+          description: "Please fill in all required fields",
+          variant: "destructive",
+        })
+        return
+      }
+
+      const { data, error } = await supabase
+        .from("certificates")
+        .insert({
+          student_id: newCertificate.student_id,
+          application_id: newCertificate.application_id || null,
+          company_id: newCertificate.company_id || null,
+          certificate_type: newCertificate.certificate_type,
+          title: newCertificate.title,
+          description: newCertificate.description || null,
+          issue_date: newCertificate.issue_date,
+          certificate_url: newCertificate.certificate_url || null,
+          issued_by: profile.user_id,
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      toast({
+        title: "Certificate created",
+        description: "The certificate has been generated successfully.",
+      })
+
+      setShowCreateDialog(false)
+      setNewCertificate({
+        student_id: "",
+        application_id: "",
+        company_id: "",
+        certificate_type: "internship",
+        title: "",
+        description: "",
+        issue_date: new Date().toISOString().split("T")[0],
+        certificate_url: "",
+      })
+
+      fetchCertificates()
+    } catch (error: any) {
+      console.error("[v0] Error creating certificate:", error)
+      toast({
+        title: "Error creating certificate",
+        description: error.message,
+        variant: "destructive",
+      })
+    }
   }
 
   const handleUpload = () => {
@@ -197,68 +212,258 @@ export default function Certificates() {
     setShowUploadDialog(false)
   }
 
+  const getStatusIcon = (status: string) => {
+    return <CheckCircle className="h-4 w-4" />
+  }
+
+  const getStatusColor = (status: string) => {
+    return "bg-green-100 text-green-800 border-green-200"
+  }
+
+  const filteredCertificates = certificates.filter((cert) => {
+    const matchesSearch =
+      cert.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (cert.company?.name && cert.company.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (cert.student?.full_name && cert.student.full_name.toLowerCase().includes(searchTerm.toLowerCase()))
+
+    const matchesType = typeFilter === "all" || cert.certificate_type === typeFilter
+
+    return matchesSearch && matchesType
+  })
+
+  const certificatesByType = {
+    internship: certificates.filter((c) => c.certificate_type === "internship").length,
+    placement: certificates.filter((c) => c.certificate_type === "placement").length,
+    training: certificates.filter((c) => c.certificate_type === "training").length,
+    achievement: certificates.filter((c) => c.certificate_type === "achievement").length,
+  }
+
+  const isAdmin = profile?.role === "placement_officer" || profile?.role === "recruiter"
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5 p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="text-muted-foreground">Loading certificates...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5 p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between animate-fade-in">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">My Certificates</h1>
-          <p className="text-muted-foreground">View and manage your internship, training, and placement certificates</p>
+          <h1 className="text-3xl font-bold text-foreground">
+            {isAdmin ? "Certificates Management" : "My Certificates"}
+          </h1>
+          <p className="text-muted-foreground">
+            {isAdmin
+              ? "Generate and manage certificates for students"
+              : "View and manage your internship, training, and placement certificates"}
+          </p>
         </div>
-        <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
-          <DialogTrigger asChild>
-            <Button className="bg-gradient-primary hover:shadow-glow transition-all duration-300">
-              <Upload className="h-4 w-4 mr-2" />
-              Upload External Certificate
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Upload External Certificate</DialogTitle>
-              <DialogDescription>
-                Upload certificates from non-campus programs. These will require admin approval.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Certificate Title</label>
-                <Input placeholder="e.g., AWS Cloud Practitioner" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Issuing Organization</label>
-                <Input placeholder="e.g., Amazon Web Services" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Completion Date</label>
-                <Input type="date" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Certificate File (PDF)</label>
-                <Input type="file" accept=".pdf" />
-              </div>
-              <Button onClick={handleUpload} className="w-full">
-                Submit for Approval
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <div className="flex gap-2">
+          {isAdmin && (
+            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+              <DialogTrigger asChild>
+                <Button className="bg-gradient-primary hover:shadow-glow transition-all duration-300">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Generate Certificate
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Generate New Certificate</DialogTitle>
+                  <DialogDescription>Create a certificate for a student</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Select Application (Optional)</Label>
+                    <Select
+                      value={newCertificate.application_id}
+                      onValueChange={(value) => {
+                        const app = applications.find((a) => a.id === value)
+                        setNewCertificate({
+                          ...newCertificate,
+                          application_id: value,
+                          student_id: app?.student_id || "",
+                          title: app?.opportunity?.title
+                            ? `${app.opportunity.title} Certificate`
+                            : newCertificate.title,
+                        })
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a completed application" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {applications.map((app) => (
+                          <SelectItem key={app.id} value={app.id}>
+                            {app.student?.full_name} - {app.opportunity?.title}
+                          </SelectItem>
+                        ))}
+                        {applications.length === 0 && (
+                          <SelectItem value="none" disabled>
+                            No completed applications
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Certificate Type *</Label>
+                    <Select
+                      value={newCertificate.certificate_type}
+                      onValueChange={(value) => setNewCertificate({ ...newCertificate, certificate_type: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="internship">Internship</SelectItem>
+                        <SelectItem value="placement">Placement</SelectItem>
+                        <SelectItem value="training">Training</SelectItem>
+                        <SelectItem value="achievement">Achievement</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Certificate Title *</Label>
+                    <Input
+                      placeholder="e.g., Software Development Internship Certificate"
+                      value={newCertificate.title}
+                      onChange={(e) => setNewCertificate({ ...newCertificate, title: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Company (Optional)</Label>
+                    <Select
+                      value={newCertificate.company_id}
+                      onValueChange={(value) => setNewCertificate({ ...newCertificate, company_id: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a company" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">None</SelectItem>
+                        {companies.map((company) => (
+                          <SelectItem key={company.id} value={company.id}>
+                            {company.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Issue Date *</Label>
+                    <Input
+                      type="date"
+                      value={newCertificate.issue_date}
+                      onChange={(e) => setNewCertificate({ ...newCertificate, issue_date: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Description</Label>
+                    <Textarea
+                      placeholder="Brief description of the certificate..."
+                      value={newCertificate.description}
+                      onChange={(e) => setNewCertificate({ ...newCertificate, description: e.target.value })}
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Certificate URL (Optional)</Label>
+                    <Input
+                      placeholder="https://..."
+                      value={newCertificate.certificate_url}
+                      onChange={(e) => setNewCertificate({ ...newCertificate, certificate_url: e.target.value })}
+                    />
+                  </div>
+
+                  <Button onClick={handleCreateCertificate} className="w-full bg-gradient-primary">
+                    Generate Certificate
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+          {!isAdmin && (
+            <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+              <DialogTrigger asChild>
+                <Button className="bg-gradient-primary hover:shadow-glow transition-all duration-300">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload External Certificate
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Upload External Certificate</DialogTitle>
+                  <DialogDescription>
+                    Upload certificates from non-campus programs. These will require admin approval.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Certificate Title</Label>
+                    <Input placeholder="e.g., AWS Cloud Practitioner" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Issuing Organization</Label>
+                    <Input placeholder="e.g., Amazon Web Services" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Completion Date</Label>
+                    <Input type="date" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Certificate File (PDF)</Label>
+                    <Input type="file" accept=".pdf" />
+                  </div>
+                  <Button onClick={handleUpload} className="w-full">
+                    Submit for Approval
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-slide-up" style={{ animationDelay: "0.1s" }}>
-        {Object.entries(certificatesByStatus).map(([status, count], idx) => (
-          <Card key={status} className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300 animate-scale-in" style={{ animationDelay: `${0.1 + idx * 0.05}s` }}>
+        {Object.entries(certificatesByType).map(([type, count], idx) => (
+          <Card
+            key={type}
+            className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300 animate-scale-in"
+            style={{ animationDelay: `${0.1 + idx * 0.05}s` }}
+          >
             <CardContent className="p-4 text-center">
-              <div className="flex items-center justify-center mb-2 animate-pulse">{getStatusIcon(status)}</div>
+              <div className="flex items-center justify-center mb-2 animate-pulse">
+                <Award className="h-5 w-5 text-primary" />
+              </div>
               <div className="text-2xl font-bold text-foreground">{count}</div>
-              <div className="text-xs text-muted-foreground capitalize">{status.replace("_", " ")}</div>
+              <div className="text-xs text-muted-foreground capitalize">{type}</div>
             </CardContent>
           </Card>
         ))}
       </div>
 
       {/* Filters */}
-      <Card className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300 animate-slide-up" style={{ animationDelay: "0.2s" }}>
+      <Card
+        className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300 animate-slide-up"
+        style={{ animationDelay: "0.2s" }}
+      >
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Filter className="h-5 w-5 text-primary animate-pulse" />
@@ -266,9 +471,9 @@ export default function Certificates() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Search</label>
+              <Label>Search</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -280,22 +485,7 @@ export default function Certificates() {
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="issued">Issued</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="under_review">Under Review</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Type</label>
+              <Label>Type</Label>
               <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select type" />
@@ -304,8 +494,8 @@ export default function Certificates() {
                   <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="internship">Internship</SelectItem>
                   <SelectItem value="training">Training</SelectItem>
-                  <SelectItem value="workshop">Workshop</SelectItem>
-                  <SelectItem value="placement">Placement Offer</SelectItem>
+                  <SelectItem value="achievement">Achievement</SelectItem>
+                  <SelectItem value="placement">Placement</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -335,14 +525,21 @@ export default function Certificates() {
                     <Award className="h-5 w-5 text-primary mt-1 flex-shrink-0 animate-pulse" />
                     <span>{certificate.title}</span>
                   </CardTitle>
-                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                    <Building2 className="h-4 w-4" />
-                    <span>{certificate.company}</span>
-                  </div>
+                  {certificate.company && (
+                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                      <Building2 className="h-4 w-4" />
+                      <span>{certificate.company.name}</span>
+                    </div>
+                  )}
+                  {isAdmin && certificate.student && (
+                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                      <User className="h-4 w-4" />
+                      <span>{certificate.student.full_name}</span>
+                    </div>
+                  )}
                 </div>
-                <Badge className={getStatusColor(certificate.status)}>
-                  {getStatusIcon(certificate.status)}
-                  <span className="ml-1 capitalize">{certificate.status.replace("_", " ")}</span>
+                <Badge className="bg-green-100 text-green-800 border-green-200 capitalize">
+                  {certificate.certificate_type}
                 </Badge>
               </div>
             </CardHeader>
@@ -351,136 +548,95 @@ export default function Certificates() {
               {/* Details */}
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="space-y-1">
-                  <p className="text-muted-foreground">Issuing Authority</p>
-                  <p className="font-medium text-foreground">{certificate.issuing_authority}</p>
+                  <p className="text-muted-foreground">Issue Date</p>
+                  <p className="font-medium text-foreground">{new Date(certificate.issue_date).toLocaleDateString()}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-muted-foreground">Type</p>
                   <Badge variant="outline" className="capitalize">
-                    {certificate.type}
+                    {certificate.certificate_type}
                   </Badge>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-muted-foreground">Duration</p>
-                  <p className="font-medium text-foreground">{certificate.duration}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-muted-foreground">Completion Date</p>
-                  <p className="font-medium text-foreground">
-                    {new Date(certificate.completion_date).toLocaleDateString()}
-                  </p>
                 </div>
               </div>
 
-              {certificate.date_issued && (
-                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                  <Calendar className="h-4 w-4" />
-                  <span>Issued on {new Date(certificate.date_issued).toLocaleDateString()}</span>
-                </div>
-              )}
-
-              {certificate.mentor && (
-                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                  <User className="h-4 w-4" />
-                  <span>Mentor: {certificate.mentor}</span>
-                </div>
-              )}
-
-              {certificate.feedback && (
+              {certificate.description && (
                 <div className="bg-muted/50 p-3 rounded-lg">
-                  <p className="text-sm font-medium text-foreground mb-1">Supervisor Feedback:</p>
-                  <p className="text-sm text-muted-foreground">{certificate.feedback}</p>
+                  <p className="text-sm text-muted-foreground">{certificate.description}</p>
                 </div>
               )}
 
               {/* Actions */}
               <div className="flex items-center justify-between pt-4 border-t border-border/50">
-                <div className="flex space-x-2">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button size="sm" variant="outline" onClick={() => setSelectedCertificate(certificate)}>
-                        <Eye className="h-4 w-4 mr-1" />
-                        View Details
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl">
-                      <DialogHeader>
-                        <DialogTitle>{certificate.title}</DialogTitle>
-                        <DialogDescription>Certificate Details</DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div className="grid grid-cols-2 gap-4">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline" onClick={() => setSelectedCertificate(certificate)}>
+                      <Eye className="h-4 w-4 mr-1" />
+                      View Details
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>{certificate.title}</DialogTitle>
+                      <DialogDescription>Certificate Details</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        {certificate.company && (
                           <div>
                             <p className="text-sm font-medium text-muted-foreground">Company</p>
-                            <p className="text-foreground">{certificate.company}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">Type</p>
-                            <p className="text-foreground capitalize">{certificate.type}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">Duration</p>
-                            <p className="text-foreground">{certificate.duration}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">Status</p>
-                            <Badge className={getStatusColor(certificate.status)}>
-                              {certificate.status.replace("_", " ")}
-                            </Badge>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">Mentor</p>
-                            <p className="text-foreground">{certificate.mentor}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">Completion Date</p>
-                            <p className="text-foreground">
-                              {new Date(certificate.completion_date).toLocaleDateString()}
-                            </p>
-                          </div>
-                        </div>
-                        {certificate.feedback && (
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground mb-2">Supervisor Feedback</p>
-                            <p className="text-foreground bg-muted/50 p-3 rounded-lg">{certificate.feedback}</p>
+                            <p className="text-foreground">{certificate.company.name}</p>
                           </div>
                         )}
-                        {certificate.verification_id && (
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Type</p>
+                          <p className="text-foreground capitalize">{certificate.certificate_type}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Issue Date</p>
+                          <p className="text-foreground">{new Date(certificate.issue_date).toLocaleDateString()}</p>
+                        </div>
+                        {isAdmin && certificate.student && (
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground mb-2">Verification ID</p>
-                            <p className="text-foreground font-mono bg-muted/50 p-3 rounded-lg">
-                              {certificate.verification_id}
-                            </p>
+                            <p className="text-sm font-medium text-muted-foreground">Student</p>
+                            <p className="text-foreground">{certificate.student.full_name}</p>
                           </div>
                         )}
-                        <div className="flex space-x-2">
-                          <Button className="flex-1">Add to Resume</Button>
-                          <Button variant="outline" className="flex-1 bg-transparent">
-                            Share
-                          </Button>
-                        </div>
                       </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
+                      {certificate.description && (
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground mb-2">Description</p>
+                          <p className="text-foreground bg-muted/50 p-3 rounded-lg">{certificate.description}</p>
+                        </div>
+                      )}
+                      <div className="flex space-x-2">
+                        <Button className="flex-1">Add to Resume</Button>
+                        <Button variant="outline" className="flex-1 bg-transparent">
+                          Share
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
 
                 <div className="flex space-x-2">
                   {certificate.certificate_url && (
                     <Button
                       size="sm"
-                      onClick={() => handleDownload(certificate.id)}
+                      onClick={() => window.open(certificate.certificate_url, "_blank")}
                       className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
                     >
                       <Download className="h-4 w-4 mr-1" />
                       Download
                     </Button>
                   )}
-                  {certificate.verification_id && (
-                    <Button size="sm" variant="outline" onClick={() => handleVerify(certificate.verification_id)}>
-                      <QrCode className="h-4 w-4 mr-1" />
-                      Verify
-                    </Button>
-                  )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => toast({ title: `Certificate ID: ${certificate.id}` })}
+                  >
+                    <QrCode className="h-4 w-4 mr-1" />
+                    Verify
+                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -494,11 +650,13 @@ export default function Certificates() {
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Award className="h-16 w-16 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium text-foreground mb-2">
-              {certificates.length === 0 ? "You don't have any certificates yet" : "No certificates found"}
+              {certificates.length === 0 ? "No certificates yet" : "No certificates found"}
             </h3>
             <p className="text-muted-foreground text-center max-w-md">
               {certificates.length === 0
-                ? "Complete an internship or training to earn one!"
+                ? isAdmin
+                  ? "Generate certificates for students who have completed their programs."
+                  : "Complete an internship or training to earn one!"
                 : "Try adjusting your filters to see more results."}
             </p>
           </CardContent>

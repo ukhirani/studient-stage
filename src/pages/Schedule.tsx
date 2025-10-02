@@ -19,7 +19,19 @@ import {
 } from "@/components/ui/dialog"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/hooks/use-toast"
-import { Calendar, Clock, Video, MapPin, User, Building2, CheckCircle, XCircle, AlertCircle, Plus } from "lucide-react"
+import {
+  Calendar,
+  Clock,
+  Video,
+  MapPin,
+  User,
+  Building2,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Plus,
+  Phone,
+} from "lucide-react"
 
 interface ContextType {
   user: any
@@ -39,10 +51,10 @@ export default function Schedule() {
 
   const [newInterview, setNewInterview] = useState({
     application_id: applicationIdFromUrl || "",
-    date: "",
-    time: "",
-    duration: "60",
-    mode: "video",
+    scheduled_date: "",
+    scheduled_time: "",
+    duration_minutes: "60",
+    mode: "online",
     location: "",
     meeting_link: "",
     notes: "",
@@ -65,23 +77,7 @@ export default function Schedule() {
     try {
       setLoading(true)
 
-      let query = supabase.from("interviews").select(`
-        *,
-        applications (
-          id,
-          student_id,
-          opportunity_id,
-          opportunities (
-            title,
-            company_name,
-            type
-          ),
-          profiles (
-            full_name,
-            email
-          )
-        )
-      `)
+      let query = supabase.from("interviews").select("*")
 
       // Filter based on role
       if (profile.role === "student") {
@@ -89,15 +85,55 @@ export default function Schedule() {
         const { data: studentApps } = await supabase.from("applications").select("id").eq("student_id", profile.user_id)
 
         const appIds = studentApps?.map((app) => app.id) || []
-        query = query.in("application_id", appIds)
+        if (appIds.length > 0) {
+          query = query.in("application_id", appIds)
+        } else {
+          setInterviews([])
+          setLoading(false)
+          return
+        }
       }
 
-      const { data, error } = await query.order("date", { ascending: true }).order("time", { ascending: true })
+      const { data, error } = await query
+        .order("scheduled_date", { ascending: true })
+        .order("scheduled_time", { ascending: true })
 
       if (error) throw error
 
-      setInterviews(data || [])
+      // Fetch related data for each interview
+      const interviewsWithData = await Promise.all(
+        (data || []).map(async (interview) => {
+          const { data: application } = await supabase
+            .from("applications")
+            .select("id, student_id, opportunity_id")
+            .eq("id", interview.application_id)
+            .single()
+
+          if (!application) return { ...interview, application: null }
+
+          const [opportunityData, profileData] = await Promise.all([
+            supabase
+              .from("opportunities")
+              .select("title, company_name, type")
+              .eq("id", application.opportunity_id)
+              .single(),
+            supabase.from("profiles").select("full_name, email").eq("user_id", application.student_id).single(),
+          ])
+
+          return {
+            ...interview,
+            application: {
+              ...application,
+              opportunities: opportunityData.data,
+              profiles: profileData.data,
+            },
+          }
+        }),
+      )
+
+      setInterviews(interviewsWithData)
     } catch (error: any) {
+      console.error("[v0] Error loading interviews:", error)
       toast({
         title: "Error loading interviews",
         description: error.message,
@@ -112,32 +148,37 @@ export default function Schedule() {
     try {
       const { data, error } = await supabase
         .from("applications")
-        .select(`
-          id,
-          student_id,
-          opportunity_id,
-          opportunities (
-            title,
-            company_name
-          ),
-          profiles (
-            full_name,
-            email
-          )
-        `)
+        .select("id, student_id, opportunity_id")
         .eq("status", "shortlisted")
         .order("applied_at", { ascending: false })
 
       if (error) throw error
-      setApplications(data || [])
+
+      // Fetch related data for each application
+      const applicationsWithData = await Promise.all(
+        (data || []).map(async (app) => {
+          const [opportunityData, profileData] = await Promise.all([
+            supabase.from("opportunities").select("title, company_name").eq("id", app.opportunity_id).single(),
+            supabase.from("profiles").select("full_name, email").eq("user_id", app.student_id).single(),
+          ])
+
+          return {
+            ...app,
+            opportunities: opportunityData.data,
+            profiles: profileData.data,
+          }
+        }),
+      )
+
+      setApplications(applicationsWithData)
     } catch (error: any) {
-      console.error("Error fetching applications:", error)
+      console.error("[v0] Error fetching applications:", error)
     }
   }
 
   const handleCreateInterview = async () => {
     try {
-      if (!newInterview.application_id || !newInterview.date || !newInterview.time) {
+      if (!newInterview.application_id || !newInterview.scheduled_date || !newInterview.scheduled_time) {
         toast({
           title: "Missing required fields",
           description: "Please fill in all required fields",
@@ -146,19 +187,19 @@ export default function Schedule() {
         return
       }
 
-      if (newInterview.mode === "video" && !newInterview.meeting_link) {
+      if (newInterview.mode === "online" && !newInterview.meeting_link) {
         toast({
           title: "Missing meeting link",
-          description: "Please provide a meeting link for video interviews",
+          description: "Please provide a meeting link for online interviews",
           variant: "destructive",
         })
         return
       }
 
-      if (newInterview.mode === "in-person" && !newInterview.location) {
+      if (newInterview.mode === "offline" && !newInterview.location) {
         toast({
           title: "Missing location",
-          description: "Please provide a location for in-person interviews",
+          description: "Please provide a location for offline interviews",
           variant: "destructive",
         })
         return
@@ -169,14 +210,14 @@ export default function Schedule() {
         .from("interviews")
         .insert({
           application_id: newInterview.application_id,
-          date: newInterview.date,
-          time: newInterview.time,
-          duration: Number.parseInt(newInterview.duration),
+          scheduled_date: newInterview.scheduled_date,
+          scheduled_time: newInterview.scheduled_time,
+          duration_minutes: Number.parseInt(newInterview.duration_minutes),
           mode: newInterview.mode,
-          location: newInterview.mode === "in-person" ? newInterview.location : null,
-          meeting_link: newInterview.mode === "video" ? newInterview.meeting_link : null,
+          location: newInterview.mode === "offline" ? newInterview.location : null,
+          meeting_link: newInterview.mode === "online" ? newInterview.meeting_link : null,
           notes: newInterview.notes || null,
-          status: "proposed",
+          status: "scheduled",
           created_by: profile.user_id,
         })
         .select()
@@ -189,7 +230,7 @@ export default function Schedule() {
         .from("applications")
         .update({
           status: "interview_scheduled",
-          interview_scheduled_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         })
         .eq("id", newInterview.application_id)
 
@@ -203,10 +244,10 @@ export default function Schedule() {
       setShowCreateDialog(false)
       setNewInterview({
         application_id: "",
-        date: "",
-        time: "",
-        duration: "60",
-        mode: "video",
+        scheduled_date: "",
+        scheduled_time: "",
+        duration_minutes: "60",
+        mode: "online",
         location: "",
         meeting_link: "",
         notes: "",
@@ -215,6 +256,7 @@ export default function Schedule() {
       fetchInterviews()
       fetchShortlistedApplications()
     } catch (error: any) {
+      console.error("[v0] Error scheduling interview:", error)
       toast({
         title: "Error scheduling interview",
         description: error.message,
@@ -225,10 +267,7 @@ export default function Schedule() {
 
   const handleConfirmInterview = async (interviewId: string) => {
     try {
-      const { error } = await supabase
-        .from("interviews")
-        .update({ status: "confirmed", confirmed_at: new Date().toISOString() })
-        .eq("id", interviewId)
+      const { error } = await supabase.from("interviews").update({ status: "confirmed" }).eq("id", interviewId)
 
       if (error) throw error
 
@@ -249,10 +288,7 @@ export default function Schedule() {
 
   const handleCancelInterview = async (interviewId: string) => {
     try {
-      const { error } = await supabase
-        .from("interviews")
-        .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
-        .eq("id", interviewId)
+      const { error } = await supabase.from("interviews").update({ status: "cancelled" }).eq("id", interviewId)
 
       if (error) throw error
 
@@ -272,9 +308,30 @@ export default function Schedule() {
     }
   }
 
+  const handleCompleteInterview = async (interviewId: string) => {
+    try {
+      const { error } = await supabase.from("interviews").update({ status: "completed" }).eq("id", interviewId)
+
+      if (error) throw error
+
+      toast({
+        title: "Interview marked as completed",
+        description: "The interview has been marked as completed.",
+      })
+
+      fetchInterviews()
+    } catch (error: any) {
+      toast({
+        title: "Error completing interview",
+        description: error.message,
+        variant: "destructive",
+      })
+    }
+  }
+
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "proposed":
+      case "scheduled":
         return <Clock className="h-4 w-4" />
       case "confirmed":
         return <CheckCircle className="h-4 w-4" />
@@ -282,6 +339,8 @@ export default function Schedule() {
         return <CheckCircle className="h-4 w-4" />
       case "cancelled":
         return <XCircle className="h-4 w-4" />
+      case "rescheduled":
+        return <AlertCircle className="h-4 w-4" />
       default:
         return <AlertCircle className="h-4 w-4" />
     }
@@ -289,7 +348,7 @@ export default function Schedule() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "proposed":
+      case "scheduled":
         return "bg-yellow-100 text-yellow-800 border-yellow-200"
       case "confirmed":
         return "bg-green-100 text-green-800 border-green-200"
@@ -297,8 +356,23 @@ export default function Schedule() {
         return "bg-blue-100 text-blue-800 border-blue-200"
       case "cancelled":
         return "bg-red-100 text-red-800 border-red-200"
+      case "rescheduled":
+        return "bg-orange-100 text-orange-800 border-orange-200"
       default:
         return "bg-gray-100 text-gray-800 border-gray-200"
+    }
+  }
+
+  const getModeIcon = (mode: string) => {
+    switch (mode) {
+      case "online":
+        return <Video className="h-4 w-4 text-primary" />
+      case "offline":
+        return <MapPin className="h-4 w-4 text-primary" />
+      case "phone":
+        return <Phone className="h-4 w-4 text-primary" />
+      default:
+        return <Video className="h-4 w-4 text-primary" />
     }
   }
 
@@ -335,7 +409,7 @@ export default function Schedule() {
                 Schedule Interview
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Schedule New Interview</DialogTitle>
                 <DialogDescription>Propose interview slots for a shortlisted candidate</DialogDescription>
@@ -356,6 +430,11 @@ export default function Schedule() {
                           {app.profiles?.full_name} - {app.opportunities?.title} at {app.opportunities?.company_name}
                         </SelectItem>
                       ))}
+                      {applications.length === 0 && (
+                        <SelectItem value="none" disabled>
+                          No shortlisted candidates available
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -365,8 +444,8 @@ export default function Schedule() {
                     <Label>Date *</Label>
                     <Input
                       type="date"
-                      value={newInterview.date}
-                      onChange={(e) => setNewInterview({ ...newInterview, date: e.target.value })}
+                      value={newInterview.scheduled_date}
+                      onChange={(e) => setNewInterview({ ...newInterview, scheduled_date: e.target.value })}
                       min={new Date().toISOString().split("T")[0]}
                     />
                   </div>
@@ -374,8 +453,8 @@ export default function Schedule() {
                     <Label>Time *</Label>
                     <Input
                       type="time"
-                      value={newInterview.time}
-                      onChange={(e) => setNewInterview({ ...newInterview, time: e.target.value })}
+                      value={newInterview.scheduled_time}
+                      onChange={(e) => setNewInterview({ ...newInterview, scheduled_time: e.target.value })}
                     />
                   </div>
                 </div>
@@ -384,8 +463,8 @@ export default function Schedule() {
                   <div className="space-y-2">
                     <Label>Duration (minutes) *</Label>
                     <Select
-                      value={newInterview.duration}
-                      onValueChange={(value) => setNewInterview({ ...newInterview, duration: value })}
+                      value={newInterview.duration_minutes}
+                      onValueChange={(value) => setNewInterview({ ...newInterview, duration_minutes: value })}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -395,6 +474,7 @@ export default function Schedule() {
                         <SelectItem value="45">45 minutes</SelectItem>
                         <SelectItem value="60">60 minutes</SelectItem>
                         <SelectItem value="90">90 minutes</SelectItem>
+                        <SelectItem value="120">120 minutes</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -408,15 +488,15 @@ export default function Schedule() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="video">Video Call</SelectItem>
-                        <SelectItem value="in-person">In-Person</SelectItem>
+                        <SelectItem value="online">Online (Video Call)</SelectItem>
+                        <SelectItem value="offline">Offline (In-Person)</SelectItem>
                         <SelectItem value="phone">Phone Call</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
-                {newInterview.mode === "video" && (
+                {newInterview.mode === "online" && (
                   <div className="space-y-2">
                     <Label>Meeting Link *</Label>
                     <Input
@@ -428,7 +508,7 @@ export default function Schedule() {
                   </div>
                 )}
 
-                {newInterview.mode === "in-person" && (
+                {newInterview.mode === "offline" && (
                   <div className="space-y-2">
                     <Label>Location *</Label>
                     <Input
@@ -449,8 +529,8 @@ export default function Schedule() {
                   />
                 </div>
 
-                <Button onClick={handleCreateInterview} className="w-full">
-                  Propose Interview Slot
+                <Button onClick={handleCreateInterview} className="w-full bg-gradient-primary">
+                  Schedule Interview
                 </Button>
               </div>
             </DialogContent>
@@ -459,16 +539,16 @@ export default function Schedule() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-card border-border/50">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <Card className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300">
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold text-foreground">
-              {interviews.filter((i) => i.status === "proposed").length}
+              {interviews.filter((i) => i.status === "scheduled").length}
             </div>
-            <div className="text-xs text-muted-foreground">Proposed</div>
+            <div className="text-xs text-muted-foreground">Scheduled</div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-card border-border/50">
+        <Card className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300">
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold text-green-600">
               {interviews.filter((i) => i.status === "confirmed").length}
@@ -476,7 +556,7 @@ export default function Schedule() {
             <div className="text-xs text-muted-foreground">Confirmed</div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-card border-border/50">
+        <Card className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300">
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold text-blue-600">
               {interviews.filter((i) => i.status === "completed").length}
@@ -484,7 +564,15 @@ export default function Schedule() {
             <div className="text-xs text-muted-foreground">Completed</div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-card border-border/50">
+        <Card className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300">
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-red-600">
+              {interviews.filter((i) => i.status === "cancelled").length}
+            </div>
+            <div className="text-xs text-muted-foreground">Cancelled</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300">
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold text-foreground">{interviews.length}</div>
             <div className="text-xs text-muted-foreground">Total</div>
@@ -494,39 +582,40 @@ export default function Schedule() {
 
       {/* Interviews List */}
       <div className="space-y-4">
-        {interviews.map((interview) => {
-          const application = interview.applications
+        {interviews.map((interview, index) => {
+          const application = interview.application
           const student = application?.profiles
           const opportunity = application?.opportunities
 
           return (
             <Card
               key={interview.id}
-              className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-[1.01] transition-all duration-300"
+              className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-[1.01] transition-all duration-300 animate-fade-in"
+              style={{ animationDelay: `${index * 0.05}s` }}
             >
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="space-y-2 flex-1">
-                    <CardTitle className="text-xl text-foreground">{opportunity?.title}</CardTitle>
+                    <CardTitle className="text-xl text-foreground">{opportunity?.title || "Interview"}</CardTitle>
                     <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center space-x-1">
                         <Building2 className="h-4 w-4" />
-                        <span>{opportunity?.company_name}</span>
+                        <span>{opportunity?.company_name || "Company"}</span>
                       </div>
-                      {isRecruiterOrAdmin && (
+                      {isRecruiterOrAdmin && student && (
                         <div className="flex items-center space-x-1">
                           <User className="h-4 w-4" />
-                          <span>{student?.full_name}</span>
+                          <span>{student.full_name}</span>
                         </div>
                       )}
                       <div className="flex items-center space-x-1">
                         <Calendar className="h-4 w-4" />
-                        <span>{new Date(interview.date).toLocaleDateString()}</span>
+                        <span>{new Date(interview.scheduled_date).toLocaleDateString()}</span>
                       </div>
                       <div className="flex items-center space-x-1">
                         <Clock className="h-4 w-4" />
                         <span>
-                          {interview.time} ({interview.duration} min)
+                          {interview.scheduled_time} ({interview.duration_minutes} min)
                         </span>
                       </div>
                     </div>
@@ -543,14 +632,10 @@ export default function Schedule() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2 text-sm">
-                      {interview.mode === "video" ? (
-                        <Video className="h-4 w-4 text-primary" />
-                      ) : (
-                        <MapPin className="h-4 w-4 text-primary" />
-                      )}
+                      {getModeIcon(interview.mode)}
                       <span className="font-medium capitalize">{interview.mode}</span>
                     </div>
-                    {interview.mode === "video" && interview.meeting_link && (
+                    {interview.mode === "online" && interview.meeting_link && (
                       <a
                         href={interview.meeting_link}
                         target="_blank"
@@ -560,15 +645,15 @@ export default function Schedule() {
                         {interview.meeting_link}
                       </a>
                     )}
-                    {interview.mode === "in-person" && interview.location && (
+                    {interview.mode === "offline" && interview.location && (
                       <p className="text-sm text-muted-foreground">{interview.location}</p>
                     )}
                   </div>
 
-                  {!isRecruiterOrAdmin && (
+                  {isRecruiterOrAdmin && student && (
                     <div className="space-y-2">
-                      <p className="text-sm font-medium">Contact</p>
-                      <p className="text-sm text-muted-foreground">{student?.email}</p>
+                      <p className="text-sm font-medium">Student Contact</p>
+                      <p className="text-sm text-muted-foreground">{student.email}</p>
                     </div>
                   )}
                 </div>
@@ -580,9 +665,16 @@ export default function Schedule() {
                   </div>
                 )}
 
+                {interview.feedback && (
+                  <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
+                    <p className="text-sm font-medium text-blue-900 mb-1">Feedback:</p>
+                    <p className="text-sm text-blue-800">{interview.feedback}</p>
+                  </div>
+                )}
+
                 {/* Actions */}
                 <div className="flex items-center justify-end space-x-2 pt-4 border-t border-border/50">
-                  {!isRecruiterOrAdmin && interview.status === "proposed" && (
+                  {!isRecruiterOrAdmin && interview.status === "scheduled" && (
                     <>
                       <Button
                         size="sm"
@@ -598,10 +690,19 @@ export default function Schedule() {
                       </Button>
                     </>
                   )}
-                  {isRecruiterOrAdmin && interview.status !== "cancelled" && interview.status !== "completed" && (
-                    <Button size="sm" variant="destructive" onClick={() => handleCancelInterview(interview.id)}>
-                      Cancel Interview
-                    </Button>
+                  {isRecruiterOrAdmin && (interview.status === "scheduled" || interview.status === "confirmed") && (
+                    <>
+                      <Button
+                        size="sm"
+                        onClick={() => handleCompleteInterview(interview.id)}
+                        className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
+                      >
+                        Mark as Completed
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => handleCancelInterview(interview.id)}>
+                        Cancel Interview
+                      </Button>
+                    </>
                   )}
                 </div>
               </CardContent>

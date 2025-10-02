@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useOutletContext } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -16,119 +16,253 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Building2, Plus, Search, Edit, Trash2, MapPin, Users, Briefcase } from "lucide-react"
+import { Building2, Plus, Search, Edit, Trash2, MapPin, Briefcase, CheckCircle, XCircle, Clock } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { supabase } from "@/integrations/supabase/client"
+import type { Tables } from "@/integrations/supabase/types"
 
-interface Company {
-  id: string
-  name: string
-  industry: string
-  location: string
-  website: string
-  description: string
-  activeOpportunities: number
-  totalHires: number
-  status: "active" | "inactive"
+type Company = Tables<"companies">
+
+interface ContextType {
+  profile: any
 }
 
 export default function CompanyManagement() {
-  const { profile } = useOutletContext<{ profile: any }>()
+  const { profile } = useOutletContext<ContextType>()
   const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState("")
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null)
+  const [companies, setCompanies] = useState<Company[]>([])
+  const [loading, setLoading] = useState(true)
   const [newCompany, setNewCompany] = useState({
     name: "",
     industry: "",
-    location: "",
+    address: "",
     website: "",
     description: "",
+    contact_email: "",
+    contact_phone: "",
+    logo_url: "",
   })
 
-  // Mock data - replace with actual API calls
-  const [companies, setCompanies] = useState<Company[]>([
-    {
-      id: "1",
-      name: "Tech Corp",
-      industry: "Technology",
-      location: "Bangalore, India",
-      website: "https://techcorp.com",
-      description: "Leading technology company specializing in AI and ML solutions",
-      activeOpportunities: 5,
-      totalHires: 23,
-      status: "active",
-    },
-    {
-      id: "2",
-      name: "DataCorp",
-      industry: "Data Analytics",
-      location: "Mumbai, India",
-      website: "https://datacorp.com",
-      description: "Data analytics and business intelligence solutions provider",
-      activeOpportunities: 3,
-      totalHires: 15,
-      status: "active",
-    },
-    {
-      id: "3",
-      name: "StartupXYZ",
-      industry: "E-commerce",
-      location: "Delhi, India",
-      website: "https://startupxyz.com",
-      description: "Fast-growing e-commerce platform",
-      activeOpportunities: 0,
-      totalHires: 8,
-      status: "inactive",
-    },
-  ])
+  useEffect(() => {
+    fetchCompanies()
+  }, [])
 
-  const handleAddCompany = () => {
-    if (!newCompany.name || !newCompany.industry || !newCompany.location) {
+  const fetchCompanies = async () => {
+    try {
+      setLoading(true)
+      const { data, error } = await supabase.from("companies").select("*").order("created_at", { ascending: false })
+
+      if (error) throw error
+      setCompanies(data || [])
+    } catch (error: any) {
+      console.error("[v0] Error fetching companies:", error)
+      toast({
+        title: "Error loading companies",
+        description: error.message,
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAddCompany = async () => {
+    if (!newCompany.name || !newCompany.industry) {
       toast({
         title: "Missing information",
-        description: "Please fill in all required fields",
+        description: "Please fill in company name and industry",
         variant: "destructive",
       })
       return
     }
 
-    const company: Company = {
-      id: Date.now().toString(),
-      ...newCompany,
-      activeOpportunities: 0,
-      totalHires: 0,
-      status: "active",
+    try {
+      const { data, error } = await supabase
+        .from("companies")
+        .insert({
+          name: newCompany.name,
+          industry: newCompany.industry,
+          address: newCompany.address || null,
+          website: newCompany.website || null,
+          description: newCompany.description || null,
+          contact_email: newCompany.contact_email || null,
+          contact_phone: newCompany.contact_phone || null,
+          logo_url: newCompany.logo_url || null,
+          status: "pending",
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      setCompanies([data, ...companies])
+      setIsAddDialogOpen(false)
+      setNewCompany({
+        name: "",
+        industry: "",
+        address: "",
+        website: "",
+        description: "",
+        contact_email: "",
+        contact_phone: "",
+        logo_url: "",
+      })
+
+      toast({
+        title: "Company added",
+        description: `${data.name} has been added successfully`,
+      })
+    } catch (error: any) {
+      console.error("[v0] Error adding company:", error)
+      toast({
+        title: "Error adding company",
+        description: error.message,
+        variant: "destructive",
+      })
     }
-
-    setCompanies([...companies, company])
-    setIsAddDialogOpen(false)
-    setNewCompany({
-      name: "",
-      industry: "",
-      location: "",
-      website: "",
-      description: "",
-    })
-
-    toast({
-      title: "Company added",
-      description: `${company.name} has been added successfully`,
-    })
   }
 
-  const handleDeleteCompany = (id: string) => {
-    setCompanies(companies.filter((c) => c.id !== id))
-    toast({
-      title: "Company removed",
-      description: "The company has been removed from the system",
-    })
+  const handleUpdateStatus = async (companyId: string, status: "verified" | "rejected") => {
+    try {
+      const { error } = await supabase
+        .from("companies")
+        .update({
+          status,
+          verified_by: profile.user_id,
+          verified_at: new Date().toISOString(),
+        })
+        .eq("id", companyId)
+
+      if (error) throw error
+
+      setCompanies(
+        companies.map((c) =>
+          c.id === companyId
+            ? { ...c, status, verified_by: profile.user_id, verified_at: new Date().toISOString() }
+            : c,
+        ),
+      )
+
+      toast({
+        title: `Company ${status}`,
+        description: `The company has been ${status} successfully`,
+      })
+    } catch (error: any) {
+      console.error("[v0] Error updating company status:", error)
+      toast({
+        title: "Error updating status",
+        description: error.message,
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleEditCompany = async () => {
+    if (!selectedCompany) return
+
+    try {
+      const { error } = await supabase
+        .from("companies")
+        .update({
+          name: selectedCompany.name,
+          industry: selectedCompany.industry,
+          address: selectedCompany.address,
+          website: selectedCompany.website,
+          description: selectedCompany.description,
+          contact_email: selectedCompany.contact_email,
+          contact_phone: selectedCompany.contact_phone,
+          logo_url: selectedCompany.logo_url,
+        })
+        .eq("id", selectedCompany.id)
+
+      if (error) throw error
+
+      setCompanies(companies.map((c) => (c.id === selectedCompany.id ? selectedCompany : c)))
+      setIsEditDialogOpen(false)
+      setSelectedCompany(null)
+
+      toast({
+        title: "Company updated",
+        description: "Company details have been updated successfully",
+      })
+    } catch (error: any) {
+      console.error("[v0] Error updating company:", error)
+      toast({
+        title: "Error updating company",
+        description: error.message,
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDeleteCompany = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this company? This action cannot be undone.")) {
+      return
+    }
+
+    try {
+      const { error } = await supabase.from("companies").delete().eq("id", id)
+
+      if (error) throw error
+
+      setCompanies(companies.filter((c) => c.id !== id))
+      toast({
+        title: "Company removed",
+        description: "The company has been removed from the system",
+      })
+    } catch (error: any) {
+      console.error("[v0] Error deleting company:", error)
+      toast({
+        title: "Error deleting company",
+        description: error.message,
+        variant: "destructive",
+      })
+    }
   }
 
   const filteredCompanies = companies.filter(
     (company) =>
       company.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      company.industry.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      company.location.toLowerCase().includes(searchQuery.toLowerCase()),
+      (company.industry && company.industry.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (company.address && company.address.toLowerCase().includes(searchQuery.toLowerCase())),
   )
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "verified":
+        return <CheckCircle className="h-4 w-4 text-green-600" />
+      case "rejected":
+        return <XCircle className="h-4 w-4 text-red-600" />
+      default:
+        return <Clock className="h-4 w-4 text-yellow-600" />
+    }
+  }
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "verified":
+        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Verified</Badge>
+      case "rejected":
+        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Rejected</Badge>
+      default:
+        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Pending</Badge>
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5 p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading companies...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5 p-6">
@@ -147,7 +281,7 @@ export default function CompanyManagement() {
                 Add Company
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add New Company</DialogTitle>
                 <DialogDescription>Enter the company details to add them to the system</DialogDescription>
@@ -173,12 +307,33 @@ export default function CompanyManagement() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="location">Location *</Label>
+                    <Label htmlFor="address">Address</Label>
                     <Input
-                      id="location"
-                      value={newCompany.location}
-                      onChange={(e) => setNewCompany({ ...newCompany, location: e.target.value })}
+                      id="address"
+                      value={newCompany.address}
+                      onChange={(e) => setNewCompany({ ...newCompany, address: e.target.value })}
                       placeholder="Bangalore, India"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="contact_email">Contact Email</Label>
+                    <Input
+                      id="contact_email"
+                      type="email"
+                      value={newCompany.contact_email}
+                      onChange={(e) => setNewCompany({ ...newCompany, contact_email: e.target.value })}
+                      placeholder="contact@company.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="contact_phone">Contact Phone</Label>
+                    <Input
+                      id="contact_phone"
+                      value={newCompany.contact_phone}
+                      onChange={(e) => setNewCompany({ ...newCompany, contact_phone: e.target.value })}
+                      placeholder="+91 1234567890"
                     />
                   </div>
                 </div>
@@ -189,6 +344,15 @@ export default function CompanyManagement() {
                     value={newCompany.website}
                     onChange={(e) => setNewCompany({ ...newCompany, website: e.target.value })}
                     placeholder="https://company.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="logo_url">Logo URL</Label>
+                  <Input
+                    id="logo_url"
+                    value={newCompany.logo_url}
+                    onChange={(e) => setNewCompany({ ...newCompany, logo_url: e.target.value })}
+                    placeholder="https://company.com/logo.png"
                   />
                 </div>
                 <div className="space-y-2">
@@ -215,7 +379,7 @@ export default function CompanyManagement() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-slide-up" style={{ animationDelay: "0.1s" }}>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 animate-slide-up" style={{ animationDelay: "0.1s" }}>
           <Card className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">Total Companies</CardTitle>
@@ -226,21 +390,31 @@ export default function CompanyManagement() {
           </Card>
           <Card className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Active Companies</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Verified</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-green-600">
-                {companies.filter((c) => c.status === "active").length}
+                {companies.filter((c) => c.status === "verified").length}
               </div>
             </CardContent>
           </Card>
           <Card className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Opportunities</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Pending</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-blue-600">
-                {companies.reduce((sum, c) => sum + c.activeOpportunities, 0)}
+              <div className="text-3xl font-bold text-yellow-600">
+                {companies.filter((c) => c.status === "pending").length}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Rejected</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-red-600">
+                {companies.filter((c) => c.status === "rejected").length}
               </div>
             </CardContent>
           </Card>
@@ -264,37 +438,88 @@ export default function CompanyManagement() {
         {/* Companies List */}
         <div className="grid grid-cols-1 gap-4">
           {filteredCompanies.map((company, idx) => (
-            <Card key={company.id} className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-[1.01] transition-all duration-300 animate-fade-in" style={{ animationDelay: `${0.2 + idx * 0.05}s` }}>
+            <Card
+              key={company.id}
+              className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-[1.01] transition-all duration-300 animate-fade-in"
+              style={{ animationDelay: `${0.2 + idx * 0.05}s` }}
+            >
               <CardContent className="p-6">
                 <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                   <div className="flex items-start space-x-4 flex-1">
                     <div className="h-12 w-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Building2 className="h-6 w-6 text-primary" />
+                      {company.logo_url ? (
+                        <img
+                          src={company.logo_url || "/placeholder.svg"}
+                          alt={company.name}
+                          className="h-10 w-10 object-contain"
+                        />
+                      ) : (
+                        <Building2 className="h-6 w-6 text-primary" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="text-lg font-semibold text-foreground">{company.name}</h3>
-                        <Badge variant={company.status === "active" ? "default" : "secondary"}>{company.status}</Badge>
+                        {getStatusBadge(company.status)}
                       </div>
-                      <p className="text-sm text-muted-foreground mb-3">{company.description}</p>
+                      <p className="text-sm text-muted-foreground mb-3">{company.description || "No description"}</p>
                       <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-4 w-4" />
-                          {company.location}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Briefcase className="h-4 w-4" />
-                          {company.industry}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Users className="h-4 w-4" />
-                          {company.totalHires} hires
-                        </div>
+                        {company.address && (
+                          <div className="flex items-center gap-1">
+                            <MapPin className="h-4 w-4" />
+                            {company.address}
+                          </div>
+                        )}
+                        {company.industry && (
+                          <div className="flex items-center gap-1">
+                            <Briefcase className="h-4 w-4" />
+                            {company.industry}
+                          </div>
+                        )}
+                        {company.website && (
+                          <a
+                            href={company.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline"
+                          >
+                            Visit Website
+                          </a>
+                        )}
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {company.status === "pending" && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleUpdateStatus(company.id, "verified")}
+                          className="text-green-600 hover:bg-green-50"
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Verify
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleUpdateStatus(company.id, "rejected")}
+                          className="text-red-600 hover:bg-red-50"
+                        >
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Reject
+                        </Button>
+                      </>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedCompany(company)
+                        setIsEditDialogOpen(true)
+                      }}
+                    >
                       <Edit className="h-4 w-4 mr-2" />
                       Edit
                     </Button>
@@ -326,6 +551,98 @@ export default function CompanyManagement() {
           </Card>
         )}
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Company</DialogTitle>
+            <DialogDescription>Update the company details</DialogDescription>
+          </DialogHeader>
+          {selectedCompany && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Company Name</Label>
+                <Input
+                  id="edit-name"
+                  value={selectedCompany.name}
+                  onChange={(e) => setSelectedCompany({ ...selectedCompany, name: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-industry">Industry</Label>
+                  <Input
+                    id="edit-industry"
+                    value={selectedCompany.industry || ""}
+                    onChange={(e) => setSelectedCompany({ ...selectedCompany, industry: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-address">Address</Label>
+                  <Input
+                    id="edit-address"
+                    value={selectedCompany.address || ""}
+                    onChange={(e) => setSelectedCompany({ ...selectedCompany, address: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-contact-email">Contact Email</Label>
+                  <Input
+                    id="edit-contact-email"
+                    type="email"
+                    value={selectedCompany.contact_email || ""}
+                    onChange={(e) => setSelectedCompany({ ...selectedCompany, contact_email: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-contact-phone">Contact Phone</Label>
+                  <Input
+                    id="edit-contact-phone"
+                    value={selectedCompany.contact_phone || ""}
+                    onChange={(e) => setSelectedCompany({ ...selectedCompany, contact_phone: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-website">Website</Label>
+                <Input
+                  id="edit-website"
+                  value={selectedCompany.website || ""}
+                  onChange={(e) => setSelectedCompany({ ...selectedCompany, website: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-logo">Logo URL</Label>
+                <Input
+                  id="edit-logo"
+                  value={selectedCompany.logo_url || ""}
+                  onChange={(e) => setSelectedCompany({ ...selectedCompany, logo_url: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Description</Label>
+                <Textarea
+                  id="edit-description"
+                  value={selectedCompany.description || ""}
+                  onChange={(e) => setSelectedCompany({ ...selectedCompany, description: e.target.value })}
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditCompany} className="bg-gradient-primary">
+              Save Changes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

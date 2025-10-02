@@ -122,16 +122,11 @@ export default function Applications() {
 
   const updateApplicationStatus = async (applicationId: string, newStatus: string) => {
     try {
-      const updates: any = { status: newStatus }
+      const updates: any = { status: newStatus, updated_at: new Date().toISOString() }
 
       if (newStatus === "shortlisted") {
         updates.shortlisted_at = new Date().toISOString()
-      } else if (newStatus === "interview_scheduled") {
-        updates.interview_scheduled_at = new Date().toISOString()
-      } else if (newStatus === "offer_extended") {
-        updates.offer_extended_at = new Date().toISOString()
-      } else if (newStatus === "completed") {
-        updates.completed_at = new Date().toISOString()
+        updates.shortlisted_by = profile.user_id
       }
 
       const { error } = await supabase.from("applications").update(updates).eq("id", applicationId)
@@ -158,15 +153,17 @@ export default function Applications() {
 
     try {
       const updates: any = {
-        mentor_approved: approve,
-        mentor_feedback: mentorFeedback || null,
-        mentor_reviewed_at: new Date().toISOString(),
+        mentor_comments: mentorFeedback || null,
+        updated_at: new Date().toISOString(),
       }
 
-      // If approved, forward to recruiter (status remains pending but now visible to recruiter)
-      // If disapproved, mark as rejected
-      if (!approve) {
-        updates.status = "rejected"
+      if (approve) {
+        updates.status = "mentor_approved"
+        updates.mentor_approved_at = new Date().toISOString()
+        updates.mentor_id = profile.user_id
+      } else {
+        updates.status = "mentor_rejected"
+        updates.mentor_id = profile.user_id
       }
 
       const { error } = await supabase.from("applications").update(updates).eq("id", selectedApplication.id)
@@ -174,7 +171,7 @@ export default function Applications() {
       if (error) throw error
 
       toast({
-        title: approve ? "Application approved" : "Application disapproved",
+        title: approve ? "Application approved" : "Application rejected",
         description: approve
           ? "The application has been forwarded to the recruiter for review."
           : "The student will be notified of your feedback.",
@@ -251,15 +248,17 @@ export default function Applications() {
         return <Clock className="h-4 w-4" />
       case "mentor_approved":
         return <UserCheck className="h-4 w-4" />
+      case "mentor_rejected":
+        return <XCircle className="h-4 w-4" />
+      case "shortlisted":
+        return <CheckCircle className="h-4 w-4" />
       case "interview_scheduled":
         return <Calendar className="h-4 w-4" />
       case "offer_extended":
-        return <CheckCircle className="h-4 w-4" />
+        return <Award className="h-4 w-4" />
       case "rejected":
         return <XCircle className="h-4 w-4" />
       case "completed":
-        return <CheckCircle className="h-4 w-4" />
-      case "shortlisted":
         return <CheckCircle className="h-4 w-4" />
       default:
         return <AlertCircle className="h-4 w-4" />
@@ -272,6 +271,10 @@ export default function Applications() {
         return "secondary" as const
       case "mentor_approved":
         return "outline" as const
+      case "mentor_rejected":
+        return "destructive" as const
+      case "shortlisted":
+        return "default" as const
       case "interview_scheduled":
         return "outline" as const
       case "offer_extended":
@@ -279,8 +282,6 @@ export default function Applications() {
       case "rejected":
         return "destructive" as const
       case "completed":
-        return "default" as const
-      case "shortlisted":
         return "default" as const
       default:
         return "secondary" as const
@@ -299,13 +300,12 @@ export default function Applications() {
   })
 
   const applicationsByStatus = {
-    pending: applications.filter((app) => app.status === "pending" && !app.mentor_approved).length,
-    mentor_approved: applications.filter((app) => app.mentor_approved === true && app.status === "pending").length,
+    pending: applications.filter((app) => app.status === "pending").length,
+    mentor_pending: applications.filter((app) => app.status === "mentor_pending").length,
+    mentor_approved: applications.filter((app) => app.status === "mentor_approved").length,
+    mentor_rejected: applications.filter((app) => app.status === "mentor_rejected").length,
     shortlisted: applications.filter((app) => app.status === "shortlisted").length,
     interview_scheduled: applications.filter((app) => app.status === "interview_scheduled").length,
-    offer_extended: applications.filter((app) => app.status === "offer_extended").length,
-    rejected: applications.filter((app) => app.status === "rejected").length,
-    completed: applications.filter((app) => app.status === "completed").length,
   }
 
   if (loading) {
@@ -385,13 +385,14 @@ export default function Applications() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="pending">Pending Review</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="mentor_pending">Mentor Pending</SelectItem>
                   <SelectItem value="mentor_approved">Mentor Approved</SelectItem>
+                  <SelectItem value="mentor_rejected">Mentor Rejected</SelectItem>
                   <SelectItem value="shortlisted">Shortlisted</SelectItem>
                   <SelectItem value="interview_scheduled">Interview Scheduled</SelectItem>
-                  <SelectItem value="offer_extended">Offer Extended</SelectItem>
+                  <SelectItem value="selected">Selected</SelectItem>
                   <SelectItem value="rejected">Rejected</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -486,13 +487,18 @@ export default function Applications() {
               </div>
 
               {/* Mentor Feedback Display */}
-              {application.mentor_feedback && (
+              {application.mentor_comments && (
                 <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
                   <p className="text-sm font-medium text-blue-900 mb-1 flex items-center">
                     <MessageSquare className="h-4 w-4 mr-1" />
                     Mentor Feedback:
                   </p>
-                  <p className="text-sm text-blue-800">{application.mentor_feedback}</p>
+                  <p className="text-sm text-blue-800">{application.mentor_comments}</p>
+                  {application.mentor_approved_at && (
+                    <p className="text-xs text-blue-600 mt-1">
+                      Reviewed on {new Date(application.mentor_approved_at).toLocaleDateString()}
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -514,9 +520,7 @@ export default function Applications() {
                 </div>
 
                 {profile?.role === "faculty_mentor" &&
-                  application.status === "pending" &&
-                  !application.mentor_approved &&
-                  application.mentor_approved !== false && (
+                  (application.status === "pending" || application.status === "mentor_pending") && (
                     <Dialog
                       open={showMentorDialog && selectedApplication?.id === application.id}
                       onOpenChange={(open) => {
@@ -558,6 +562,12 @@ export default function Applications() {
                                 <span className="font-medium">Company:</span> {application.opportunities?.company_name}
                               </div>
                             </div>
+                            {application.cover_letter && (
+                              <div className="mt-3 pt-3 border-t border-border">
+                                <span className="font-medium text-sm">Cover Letter:</span>
+                                <p className="text-sm text-muted-foreground mt-1">{application.cover_letter}</p>
+                              </div>
+                            )}
                           </div>
 
                           <div className="space-y-2">
@@ -584,13 +594,13 @@ export default function Applications() {
                               className="flex-1"
                             >
                               <XCircle className="h-4 w-4 mr-2" />
-                              Disapprove
+                              Reject Application
                             </Button>
                           </div>
 
                           <p className="text-xs text-muted-foreground">
-                            Approved applications will be forwarded to the recruiter for consideration. Disapproved
-                            applications will be marked as rejected.
+                            Approved applications will be forwarded to the recruiter for consideration. Rejected
+                            applications will be marked as rejected and the student will be notified.
                           </p>
                         </div>
                       </DialogContent>
