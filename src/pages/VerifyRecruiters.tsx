@@ -67,15 +67,23 @@ export default function VerifyRecruiters() {
 
   const updateVerificationStatus = async (userId: string, isVerified: boolean) => {
     try {
-      const { error } = await supabase
+      console.log("[v0] Attempting to update verification status:", { userId, isVerified })
+
+      const { data, error } = await supabase
         .from("profiles")
         .update({
           is_verified: isVerified,
           updated_at: new Date().toISOString(),
         } as any)
         .eq("user_id", userId)
+        .select()
 
-      if (error) throw error
+      console.log("[v0] Update result:", { data, error })
+
+      if (error) {
+        console.error("[v0] Update error:", error)
+        throw error
+      }
 
       toast({
         title: isVerified ? "Recruiter approved" : "Recruiter rejected",
@@ -84,6 +92,7 @@ export default function VerifyRecruiters() {
 
       fetchRecruiters()
     } catch (error: any) {
+      console.error("[v0] Caught error:", error)
       toast({
         title: "Error updating verification",
         description: error.message,
