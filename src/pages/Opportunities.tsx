@@ -186,7 +186,7 @@ export default function Opportunities() {
       </div>
 
       {/* Filters */}
-      <Card className="bg-gradient-card border-border/50">
+      <Card className="bg-gradient-card border-border/50 hover:shadow-md transition-all duration-300 animate-fade-in">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Filter className="h-5 w-5 text-primary" />
@@ -251,12 +251,12 @@ export default function Opportunities() {
 
       {/* Opportunities Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {filteredOpportunities.map((opportunity) => {
+        {filteredOpportunities.map((opportunity, index) => {
           const deadlineStatus = getDeadlineStatus(opportunity.deadline);
           const isApplied = hasApplied(opportunity.id);
 
           return (
-            <Card key={opportunity.id} className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300">
+            <Card key={opportunity.id} className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300 animate-fade-in" style={{animationDelay: `${index * 0.1}s`}}>
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="space-y-2">

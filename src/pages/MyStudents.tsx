@@ -75,9 +75,9 @@ export default function MyStudents() {
             .select("*, opportunities(title, company_name, type)")
             .eq("student_id", student.user_id)
 
-          const placedCount = applications?.filter((app) => app.status === "completed").length || 0
-          const interviewCount = applications?.filter((app) => app.status === "interview_scheduled").length || 0
-          const offerCount = applications?.filter((app) => app.status === "offer_extended").length || 0
+          const placedCount = applications?.filter((app) => app.status === "selected").length || 0
+          const interviewCount = applications?.filter((app) => app.status === "shortlisted").length || 0
+          const offerCount = applications?.filter((app) => app.status === "under_review").length || 0
 
           return {
             ...student,
@@ -188,18 +188,18 @@ export default function MyStudents() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-card border-border/50">
+        <Card className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300 animate-fade-in">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Students</p>
                 <p className="text-2xl font-bold text-foreground">{students.length}</p>
               </div>
-              <Users className="h-8 w-8 text-primary" />
+              <Users className="h-8 w-8 text-primary animate-pulse" />
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-card border-border/50">
+        <Card className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300 animate-fade-in" style={{animationDelay: "0.1s"}}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -208,11 +208,11 @@ export default function MyStudents() {
                   {students.filter((s) => s.placementStatus === "Placed").length}
                 </p>
               </div>
-              <Award className="h-8 w-8 text-green-600" />
+              <Award className="h-8 w-8 text-green-600 animate-pulse" />
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-card border-border/50">
+        <Card className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300 animate-fade-in" style={{animationDelay: "0.2s"}}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -221,11 +221,11 @@ export default function MyStudents() {
                   {students.filter((s) => s.placementStatus === "Interning").length}
                 </p>
               </div>
-              <Briefcase className="h-8 w-8 text-blue-600" />
+              <Briefcase className="h-8 w-8 text-blue-600 animate-pulse" />
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-card border-border/50">
+        <Card className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300 animate-fade-in" style={{animationDelay: "0.3s"}}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -234,14 +234,14 @@ export default function MyStudents() {
                   {students.filter((s) => s.placementStatus === "Unplaced").length}
                 </p>
               </div>
-              <TrendingUp className="h-8 w-8 text-yellow-600" />
+              <TrendingUp className="h-8 w-8 text-yellow-600 animate-pulse" />
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Filters */}
-      <Card className="bg-gradient-card border-border/50">
+      <Card className="bg-gradient-card border-border/50 hover:shadow-md transition-all duration-300 animate-fade-in" style={{animationDelay: "0.4s"}}>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Search className="h-5 w-5 text-primary" />
@@ -298,10 +298,11 @@ export default function MyStudents() {
 
       {/* Students List */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredStudents.map((student) => (
+        {filteredStudents.map((student, index) => (
           <Card
             key={student.user_id}
-            className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300"
+            className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300 animate-fade-in"
+            style={{animationDelay: `${0.5 + index * 0.05}s`}}
           >
             <CardHeader>
               <div className="flex items-start justify-between">

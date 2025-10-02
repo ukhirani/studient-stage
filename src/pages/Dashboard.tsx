@@ -150,12 +150,12 @@ export default function Dashboard() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {data.stats.map((stat, index) => (
-          <Card key={index} className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300">
+          <Card key={index} className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300 animate-fade-in" style={{animationDelay: `${index * 0.1}s`}}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {stat.title}
               </CardTitle>
-              <stat.icon className={`h-5 w-5 ${stat.color}`} />
+              <stat.icon className={`h-5 w-5 ${stat.color} animate-pulse`} />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-foreground">{stat.value}</div>
@@ -166,7 +166,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Activities */}
-        <Card className="bg-gradient-card border-border/50">
+        <Card className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300 animate-fade-in" style={{animationDelay: "0.4s"}}>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Clock className="h-5 w-5 text-primary" />
@@ -176,7 +176,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="space-y-4">
             {data.recentActivities.map((activity, index) => (
-              <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+              <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-all duration-200 animate-fade-in" style={{animationDelay: `${0.5 + index * 0.1}s`}}>
                 <div className="space-y-1">
                   <p className="text-sm font-medium">
                     {activity.action} {activity.company || activity.student}
@@ -195,7 +195,7 @@ export default function Dashboard() {
         </Card>
 
         {/* Role-specific Content */}
-        <Card className="bg-gradient-card border-border/50">
+        <Card className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300 animate-fade-in" style={{animationDelay: "0.4s"}}>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               {userRole === "student" && (

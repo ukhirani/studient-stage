@@ -193,8 +193,8 @@ export default function Applications() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        {Object.entries(applicationsByStatus).map(([status, count]) => (
-          <Card key={status} className="bg-gradient-card border-border/50">
+        {Object.entries(applicationsByStatus).map(([status, count], index) => (
+          <Card key={status} className="bg-gradient-card border-border/50 hover:shadow-lg hover:scale-105 transition-all duration-300 animate-fade-in" style={{animationDelay: `${index * 0.1}s`}}>
             <CardContent className="p-4 text-center">
               <div className="flex items-center justify-center mb-2">
                 {getStatusIcon(status)}
@@ -209,7 +209,7 @@ export default function Applications() {
       </div>
 
       {/* Filters */}
-      <Card className="bg-gradient-card border-border/50">
+      <Card className="bg-gradient-card border-border/50 hover:shadow-md transition-all duration-300 animate-fade-in" style={{animationDelay: "0.5s"}}>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Search className="h-5 w-5 text-primary" />
@@ -252,8 +252,8 @@ export default function Applications() {
 
       {/* Applications List */}
       <div className="space-y-4">
-        {filteredApplications.map((application) => (
-          <Card key={application.id} className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300">
+        {filteredApplications.map((application, index) => (
+          <Card key={application.id} className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 animate-fade-in" style={{animationDelay: `${0.6 + index * 0.05}s`}}>
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="space-y-2">

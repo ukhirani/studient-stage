@@ -217,7 +217,7 @@ export default function Profile() {
         </TabsList>
 
         <TabsContent value="personal">
-          <Card className="bg-gradient-card border-border/50">
+          <Card className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300 animate-fade-in">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <User className="h-5 w-5 text-primary" />
@@ -328,7 +328,7 @@ export default function Profile() {
 
         {profile?.role === "student" && (
           <TabsContent value="academic">
-            <Card className="bg-gradient-card border-border/50">
+            <Card className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300 animate-fade-in">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <GraduationCap className="h-5 w-5 text-primary" />
@@ -464,7 +464,7 @@ export default function Profile() {
         )}
 
         <TabsContent value="settings">
-          <Card className="bg-gradient-card border-border/50">
+          <Card className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300 animate-fade-in">
             <CardHeader>
               <CardTitle>Account Settings</CardTitle>
               <CardDescription>

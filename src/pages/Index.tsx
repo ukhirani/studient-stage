@@ -122,7 +122,7 @@ const Index = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {features.map((feature, index) => (
-            <Card key={index} className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300">
+            <Card key={index} className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300 animate-fade-in" style={{animationDelay: `${index * 0.1}s`}}>
               <CardHeader className="text-center">
                 <feature.icon className="h-12 w-12 text-primary mx-auto mb-4" />
                 <CardTitle className="text-xl">{feature.title}</CardTitle>
@@ -148,7 +148,7 @@ const Index = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {roles.map((role, index) => (
-            <Card key={index} className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300">
+            <Card key={index} className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300 animate-fade-in" style={{animationDelay: `${0.4 + index * 0.1}s`}}>
               <CardHeader className="text-center">
                 <role.icon className={`h-12 w-12 mx-auto mb-4 ${role.color}`} />
                 <CardTitle className="text-xl">{role.title}</CardTitle>

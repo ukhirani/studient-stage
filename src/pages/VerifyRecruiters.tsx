@@ -36,7 +36,21 @@ export default function VerifyRecruiters() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setRecruiters(data || []);
+      
+      // Map the data to match RecruiterProfile interface
+      const mappedRecruiters = (data || []).map((profile: any) => ({
+        id: profile.id,
+        user_id: profile.user_id,
+        full_name: profile.full_name || '',
+        email: profile.email || '',
+        phone: profile.phone || '',
+        company_name: profile.company_name || 'Not specified',
+        industry: profile.industry || 'Not specified',
+        is_verified: profile.is_verified || false,
+        created_at: profile.created_at
+      }));
+      
+      setRecruiters(mappedRecruiters);
     } catch (error: any) {
       toast({
         title: "Error fetching recruiters",
@@ -52,7 +66,10 @@ export default function VerifyRecruiters() {
     try {
       const { error } = await supabase
         .from("profiles")
-        .update({ is_verified: isVerified })
+        .update({ 
+          is_verified: isVerified,
+          updated_at: new Date().toISOString()
+        } as any)
         .eq("user_id", userId);
 
       if (error) throw error;
@@ -89,14 +106,14 @@ export default function VerifyRecruiters() {
 
       <div className="grid gap-4">
         {recruiters.length === 0 ? (
-          <Card>
+          <Card className="animate-fade-in">
             <CardContent className="text-center py-8">
               <p className="text-muted-foreground">No recruiters found.</p>
             </CardContent>
           </Card>
         ) : (
-          recruiters.map((recruiter) => (
-            <Card key={recruiter.id} className="bg-gradient-card border-border/50">
+          recruiters.map((recruiter, index) => (
+            <Card key={recruiter.id} className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 animate-fade-in" style={{animationDelay: `${index * 0.1}s`}}>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -139,7 +156,7 @@ export default function VerifyRecruiters() {
                     <>
                       <Button
                         onClick={() => updateVerificationStatus(recruiter.user_id, true)}
-                        className="bg-green-600 hover:bg-green-700 text-white"
+                        className="bg-green-600 hover:bg-green-700 text-white hover:shadow-lg transition-all duration-300"
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
                         Approve
@@ -147,7 +164,7 @@ export default function VerifyRecruiters() {
                       <Button
                         onClick={() => updateVerificationStatus(recruiter.user_id, false)}
                         variant="outline"
-                        className="border-red-200 text-red-600 hover:bg-red-50"
+                        className="border-red-200 text-red-600 hover:bg-red-50 hover:shadow-md transition-all duration-300"
                       >
                         <XCircle className="h-4 w-4 mr-2" />
                         Reject
@@ -157,7 +174,7 @@ export default function VerifyRecruiters() {
                     <Button
                       onClick={() => updateVerificationStatus(recruiter.user_id, false)}
                       variant="outline"
-                      className="border-red-200 text-red-600 hover:bg-red-50"
+                      className="border-red-200 text-red-600 hover:bg-red-50 hover:shadow-md transition-all duration-300"
                     >
                       <XCircle className="h-4 w-4 mr-2" />
                       Revoke Verification
