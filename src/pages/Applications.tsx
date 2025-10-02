@@ -124,7 +124,9 @@ export default function Applications() {
     try {
       const updates: any = { status: newStatus }
 
-      if (newStatus === "interview_scheduled") {
+      if (newStatus === "shortlisted") {
+        updates.shortlisted_at = new Date().toISOString()
+      } else if (newStatus === "interview_scheduled") {
         updates.interview_scheduled_at = new Date().toISOString()
       } else if (newStatus === "offer_extended") {
         updates.offer_extended_at = new Date().toISOString()
@@ -257,6 +259,8 @@ export default function Applications() {
         return <XCircle className="h-4 w-4" />
       case "completed":
         return <CheckCircle className="h-4 w-4" />
+      case "shortlisted":
+        return <CheckCircle className="h-4 w-4" />
       default:
         return <AlertCircle className="h-4 w-4" />
     }
@@ -276,6 +280,8 @@ export default function Applications() {
         return "destructive" as const
       case "completed":
         return "default" as const
+      case "shortlisted":
+        return "default" as const
       default:
         return "secondary" as const
     }
@@ -294,7 +300,8 @@ export default function Applications() {
 
   const applicationsByStatus = {
     pending: applications.filter((app) => app.status === "pending" && !app.mentor_approved).length,
-    mentor_approved: applications.filter((app) => app.mentor_approved === true).length,
+    mentor_approved: applications.filter((app) => app.mentor_approved === true && app.status === "pending").length,
+    shortlisted: applications.filter((app) => app.status === "shortlisted").length,
     interview_scheduled: applications.filter((app) => app.status === "interview_scheduled").length,
     offer_extended: applications.filter((app) => app.status === "offer_extended").length,
     rejected: applications.filter((app) => app.status === "rejected").length,
@@ -380,6 +387,7 @@ export default function Applications() {
                   <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="pending">Pending Review</SelectItem>
                   <SelectItem value="mentor_approved">Mentor Approved</SelectItem>
+                  <SelectItem value="shortlisted">Shortlisted</SelectItem>
                   <SelectItem value="interview_scheduled">Interview Scheduled</SelectItem>
                   <SelectItem value="offer_extended">Offer Extended</SelectItem>
                   <SelectItem value="rejected">Rejected</SelectItem>
@@ -449,6 +457,12 @@ export default function Applications() {
                   <div className="flex items-center space-x-2">
                     <div className="w-3 h-3 bg-primary rounded-full"></div>
                     <span>Mentor Approved</span>
+                  </div>
+                )}
+                {application.shortlisted_at && (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-primary rounded-full"></div>
+                    <span>Shortlisted</span>
                   </div>
                 )}
                 {application.interview_scheduled_at && (
@@ -590,10 +604,31 @@ export default function Applications() {
                         <>
                           <Button
                             size="sm"
-                            variant="outline"
-                            onClick={() => updateApplicationStatus(application.id, "interview_scheduled")}
+                            onClick={() => updateApplicationStatus(application.id, "shortlisted")}
+                            className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
                           >
-                            Schedule Interview
+                            Shortlist Candidate
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => updateApplicationStatus(application.id, "rejected")}
+                          >
+                            Reject
+                          </Button>
+                        </>
+                      )}
+                      {application.status === "shortlisted" && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              // Navigate to schedule page to create interview
+                              window.location.href = `/schedule?application_id=${application.id}`
+                            }}
+                          >
+                            Propose Interview Slots
                           </Button>
                           <Button
                             size="sm"
@@ -625,150 +660,18 @@ export default function Applications() {
                       {application.status === "offer_extended" && (
                         <Button
                           size="sm"
-                          onClick={() => updateApplicationStatus(application.id, "completed")}
+                          onClick={() => {
+                            setSelectedApplication(application)
+                            setShowCompletionDialog(true)
+                          }}
                           className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
                         >
-                          Mark Completed
+                          <Award className="h-4 w-4 mr-1" />
+                          Complete Internship
                         </Button>
                       )}
                     </div>
                   )}
-
-                {profile?.role === "recruiter" && application.status === "offer_extended" && (
-                  <Dialog
-                    open={showCompletionDialog && selectedApplication?.id === application.id}
-                    onOpenChange={(open) => {
-                      setShowCompletionDialog(open)
-                      if (open) setSelectedApplication(application)
-                      else setSelectedApplication(null)
-                    }}
-                  >
-                    <DialogTrigger asChild>
-                      <Button size="sm" className="bg-gradient-primary hover:shadow-glow transition-all duration-300">
-                        <Award className="h-4 w-4 mr-1" />
-                        Complete Internship
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-                      <DialogHeader>
-                        <DialogTitle>Complete Internship & Generate Certificate</DialogTitle>
-                        <DialogDescription>
-                          Provide feedback and performance evaluation for {application.profiles?.full_name}
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Performance Rating *</Label>
-                            <Select
-                              value={completionForm.performance_rating}
-                              onValueChange={(value) =>
-                                setCompletionForm({ ...completionForm, performance_rating: value })
-                              }
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="5">5 - Outstanding</SelectItem>
-                                <SelectItem value="4">4 - Exceeds Expectations</SelectItem>
-                                <SelectItem value="3">3 - Meets Expectations</SelectItem>
-                                <SelectItem value="2">2 - Needs Improvement</SelectItem>
-                                <SelectItem value="1">1 - Unsatisfactory</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Recommend for Placement? *</Label>
-                            <Select
-                              value={completionForm.recommend_for_placement}
-                              onValueChange={(value) =>
-                                setCompletionForm({ ...completionForm, recommend_for_placement: value })
-                              }
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="yes">Yes - Highly Recommend</SelectItem>
-                                <SelectItem value="maybe">Maybe - With Conditions</SelectItem>
-                                <SelectItem value="no">No - Not at this time</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Technical Skills Demonstrated *</Label>
-                          <Textarea
-                            placeholder="List the technical skills the intern demonstrated during their tenure..."
-                            value={completionForm.technical_skills}
-                            onChange={(e) => setCompletionForm({ ...completionForm, technical_skills: e.target.value })}
-                            rows={3}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Soft Skills & Teamwork *</Label>
-                          <Textarea
-                            placeholder="Describe their communication, collaboration, and professional skills..."
-                            value={completionForm.soft_skills}
-                            onChange={(e) => setCompletionForm({ ...completionForm, soft_skills: e.target.value })}
-                            rows={3}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Key Strengths *</Label>
-                          <Textarea
-                            placeholder="What were the intern's standout qualities and achievements?"
-                            value={completionForm.strengths}
-                            onChange={(e) => setCompletionForm({ ...completionForm, strengths: e.target.value })}
-                            rows={2}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Areas for Improvement</Label>
-                          <Textarea
-                            placeholder="Constructive feedback on areas where the intern can grow..."
-                            value={completionForm.areas_for_improvement}
-                            onChange={(e) =>
-                              setCompletionForm({ ...completionForm, areas_for_improvement: e.target.value })
-                            }
-                            rows={2}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Overall Feedback *</Label>
-                          <Textarea
-                            placeholder="Provide a comprehensive summary of the intern's performance and contributions..."
-                            value={completionForm.overall_feedback}
-                            onChange={(e) => setCompletionForm({ ...completionForm, overall_feedback: e.target.value })}
-                            rows={4}
-                          />
-                        </div>
-
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                          <p className="text-sm text-blue-800">
-                            <strong>Note:</strong> Upon submission, a certificate will be automatically generated with
-                            your company logo, the intern's details, and your feedback. This will be added to the
-                            student's Career Log and can be used for future placement opportunities.
-                          </p>
-                        </div>
-
-                        <Button
-                          onClick={handleInternshipCompletion}
-                          className="w-full bg-gradient-primary hover:shadow-glow transition-all duration-300"
-                        >
-                          <Award className="h-4 w-4 mr-2" />
-                          Generate Certificate & Complete Internship
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                )}
               </div>
             </CardContent>
           </Card>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useOutletContext } from "react-router-dom"
+import { useOutletContext, useSearchParams } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -17,6 +17,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { Calendar, Clock, Video, MapPin, User, Building2, CheckCircle, XCircle, AlertCircle, Plus } from "lucide-react"
 
@@ -27,13 +28,17 @@ interface ContextType {
 
 export default function Schedule() {
   const { profile } = useOutletContext<ContextType>()
+  const [searchParams] = useSearchParams()
+  const applicationIdFromUrl = searchParams.get("application_id")
+
   const [interviews, setInterviews] = useState<any[]>([])
+  const [applications, setApplications] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const { toast } = useToast()
 
   const [newInterview, setNewInterview] = useState({
-    application_id: "",
+    application_id: applicationIdFromUrl || "",
     date: "",
     time: "",
     duration: "60",
@@ -45,7 +50,14 @@ export default function Schedule() {
 
   useEffect(() => {
     fetchInterviews()
-  }, [profile])
+    if (profile?.role === "recruiter" || profile?.role === "placement_officer") {
+      fetchShortlistedApplications()
+    }
+
+    if (applicationIdFromUrl) {
+      setShowCreateDialog(true)
+    }
+  }, [profile, applicationIdFromUrl])
 
   const fetchInterviews = async () => {
     if (!profile) return
@@ -53,56 +65,38 @@ export default function Schedule() {
     try {
       setLoading(true)
 
-      // Mock data for demo - in production, fetch from Supabase
-      const mockInterviews = [
-        {
-          id: "1",
-          application_id: "app-1",
-          student_name: "John Doe",
-          student_email: "john@example.com",
-          company_name: "Tech Corp",
-          position: "Software Engineer Intern",
-          date: "2024-12-20",
-          time: "10:00",
-          duration: 60,
-          mode: "video",
-          meeting_link: "https://meet.google.com/abc-defg-hij",
-          status: "scheduled",
-          notes: "Technical round - focus on DSA",
-        },
-        {
-          id: "2",
-          application_id: "app-2",
-          student_name: "Jane Smith",
-          student_email: "jane@example.com",
-          company_name: "StartupXYZ",
-          position: "Data Analyst Intern",
-          date: "2024-12-22",
-          time: "14:00",
-          duration: 45,
-          mode: "in-person",
-          location: "Campus Placement Cell, Room 301",
-          status: "confirmed",
-          notes: "HR round",
-        },
-        {
-          id: "3",
-          application_id: "app-3",
-          student_name: "Alex Johnson",
-          student_email: "alex@example.com",
-          company_name: "DataCorp",
-          position: "ML Engineer Intern",
-          date: "2024-12-18",
-          time: "11:30",
-          duration: 90,
-          mode: "video",
-          meeting_link: "https://zoom.us/j/123456789",
-          status: "pending",
-          notes: "Final round with CTO",
-        },
-      ]
+      let query = supabase.from("interviews").select(`
+        *,
+        applications (
+          id,
+          student_id,
+          opportunity_id,
+          opportunities (
+            title,
+            company_name,
+            type
+          ),
+          profiles (
+            full_name,
+            email
+          )
+        )
+      `)
 
-      setInterviews(mockInterviews)
+      // Filter based on role
+      if (profile.role === "student") {
+        // Get student's interviews through their applications
+        const { data: studentApps } = await supabase.from("applications").select("id").eq("student_id", profile.user_id)
+
+        const appIds = studentApps?.map((app) => app.id) || []
+        query = query.in("application_id", appIds)
+      }
+
+      const { data, error } = await query.order("date", { ascending: true }).order("time", { ascending: true })
+
+      if (error) throw error
+
+      setInterviews(data || [])
     } catch (error: any) {
       toast({
         title: "Error loading interviews",
@@ -114,13 +108,98 @@ export default function Schedule() {
     }
   }
 
+  const fetchShortlistedApplications = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("applications")
+        .select(`
+          id,
+          student_id,
+          opportunity_id,
+          opportunities (
+            title,
+            company_name
+          ),
+          profiles (
+            full_name,
+            email
+          )
+        `)
+        .eq("status", "shortlisted")
+        .order("applied_at", { ascending: false })
+
+      if (error) throw error
+      setApplications(data || [])
+    } catch (error: any) {
+      console.error("Error fetching applications:", error)
+    }
+  }
+
   const handleCreateInterview = async () => {
     try {
-      // Mock implementation - in production, save to Supabase
+      if (!newInterview.application_id || !newInterview.date || !newInterview.time) {
+        toast({
+          title: "Missing required fields",
+          description: "Please fill in all required fields",
+          variant: "destructive",
+        })
+        return
+      }
+
+      if (newInterview.mode === "video" && !newInterview.meeting_link) {
+        toast({
+          title: "Missing meeting link",
+          description: "Please provide a meeting link for video interviews",
+          variant: "destructive",
+        })
+        return
+      }
+
+      if (newInterview.mode === "in-person" && !newInterview.location) {
+        toast({
+          title: "Missing location",
+          description: "Please provide a location for in-person interviews",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Create interview
+      const { data: interview, error: interviewError } = await supabase
+        .from("interviews")
+        .insert({
+          application_id: newInterview.application_id,
+          date: newInterview.date,
+          time: newInterview.time,
+          duration: Number.parseInt(newInterview.duration),
+          mode: newInterview.mode,
+          location: newInterview.mode === "in-person" ? newInterview.location : null,
+          meeting_link: newInterview.mode === "video" ? newInterview.meeting_link : null,
+          notes: newInterview.notes || null,
+          status: "proposed",
+          created_by: profile.user_id,
+        })
+        .select()
+        .single()
+
+      if (interviewError) throw interviewError
+
+      // Update application status to interview_scheduled
+      const { error: appError } = await supabase
+        .from("applications")
+        .update({
+          status: "interview_scheduled",
+          interview_scheduled_at: new Date().toISOString(),
+        })
+        .eq("id", newInterview.application_id)
+
+      if (appError) throw appError
+
       toast({
         title: "Interview scheduled",
         description: "The student will be notified about the interview slot.",
       })
+
       setShowCreateDialog(false)
       setNewInterview({
         application_id: "",
@@ -132,7 +211,9 @@ export default function Schedule() {
         meeting_link: "",
         notes: "",
       })
+
       fetchInterviews()
+      fetchShortlistedApplications()
     } catch (error: any) {
       toast({
         title: "Error scheduling interview",
@@ -144,10 +225,18 @@ export default function Schedule() {
 
   const handleConfirmInterview = async (interviewId: string) => {
     try {
+      const { error } = await supabase
+        .from("interviews")
+        .update({ status: "confirmed", confirmed_at: new Date().toISOString() })
+        .eq("id", interviewId)
+
+      if (error) throw error
+
       toast({
         title: "Interview confirmed",
         description: "You have confirmed your attendance for this interview.",
       })
+
       fetchInterviews()
     } catch (error: any) {
       toast({
@@ -160,11 +249,19 @@ export default function Schedule() {
 
   const handleCancelInterview = async (interviewId: string) => {
     try {
+      const { error } = await supabase
+        .from("interviews")
+        .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+        .eq("id", interviewId)
+
+      if (error) throw error
+
       toast({
         title: "Interview cancelled",
         description: "The interview has been cancelled and all parties notified.",
         variant: "destructive",
       })
+
       fetchInterviews()
     } catch (error: any) {
       toast({
@@ -177,27 +274,27 @@ export default function Schedule() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "scheduled":
+      case "proposed":
         return <Clock className="h-4 w-4" />
       case "confirmed":
         return <CheckCircle className="h-4 w-4" />
-      case "pending":
-        return <AlertCircle className="h-4 w-4" />
+      case "completed":
+        return <CheckCircle className="h-4 w-4" />
       case "cancelled":
         return <XCircle className="h-4 w-4" />
       default:
-        return <Clock className="h-4 w-4" />
+        return <AlertCircle className="h-4 w-4" />
     }
   }
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "scheduled":
-        return "bg-blue-100 text-blue-800 border-blue-200"
+      case "proposed":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200"
       case "confirmed":
         return "bg-green-100 text-green-800 border-green-200"
-      case "pending":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200"
+      case "completed":
+        return "bg-blue-100 text-blue-800 border-blue-200"
       case "cancelled":
         return "bg-red-100 text-red-800 border-red-200"
       default:
@@ -241,9 +338,28 @@ export default function Schedule() {
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Schedule New Interview</DialogTitle>
-                <DialogDescription>Create a new interview slot for a candidate</DialogDescription>
+                <DialogDescription>Propose interview slots for a shortlisted candidate</DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Select Candidate *</Label>
+                  <Select
+                    value={newInterview.application_id}
+                    onValueChange={(value) => setNewInterview({ ...newInterview, application_id: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a shortlisted candidate" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {applications.map((app) => (
+                        <SelectItem key={app.id} value={app.id}>
+                          {app.profiles?.full_name} - {app.opportunities?.title} at {app.opportunities?.company_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Date *</Label>
@@ -251,6 +367,7 @@ export default function Schedule() {
                       type="date"
                       value={newInterview.date}
                       onChange={(e) => setNewInterview({ ...newInterview, date: e.target.value })}
+                      min={new Date().toISOString().split("T")[0]}
                     />
                   </div>
                   <div className="space-y-2">
@@ -333,7 +450,7 @@ export default function Schedule() {
                 </div>
 
                 <Button onClick={handleCreateInterview} className="w-full">
-                  Schedule Interview
+                  Propose Interview Slot
                 </Button>
               </div>
             </DialogContent>
@@ -346,9 +463,9 @@ export default function Schedule() {
         <Card className="bg-gradient-card border-border/50">
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold text-foreground">
-              {interviews.filter((i) => i.status === "scheduled").length}
+              {interviews.filter((i) => i.status === "proposed").length}
             </div>
-            <div className="text-xs text-muted-foreground">Scheduled</div>
+            <div className="text-xs text-muted-foreground">Proposed</div>
           </CardContent>
         </Card>
         <Card className="bg-gradient-card border-border/50">
@@ -361,10 +478,10 @@ export default function Schedule() {
         </Card>
         <Card className="bg-gradient-card border-border/50">
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-yellow-600">
-              {interviews.filter((i) => i.status === "pending").length}
+            <div className="text-2xl font-bold text-blue-600">
+              {interviews.filter((i) => i.status === "completed").length}
             </div>
-            <div className="text-xs text-muted-foreground">Pending</div>
+            <div className="text-xs text-muted-foreground">Completed</div>
           </CardContent>
         </Card>
         <Card className="bg-gradient-card border-border/50">
@@ -377,119 +494,120 @@ export default function Schedule() {
 
       {/* Interviews List */}
       <div className="space-y-4">
-        {interviews.map((interview) => (
-          <Card
-            key={interview.id}
-            className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-[1.01] transition-all duration-300"
-          >
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="space-y-2 flex-1">
-                  <CardTitle className="text-xl text-foreground">{interview.position}</CardTitle>
-                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center space-x-1">
-                      <Building2 className="h-4 w-4" />
-                      <span>{interview.company_name}</span>
-                    </div>
-                    {isRecruiterOrAdmin && (
+        {interviews.map((interview) => {
+          const application = interview.applications
+          const student = application?.profiles
+          const opportunity = application?.opportunities
+
+          return (
+            <Card
+              key={interview.id}
+              className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-[1.01] transition-all duration-300"
+            >
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="space-y-2 flex-1">
+                    <CardTitle className="text-xl text-foreground">{opportunity?.title}</CardTitle>
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center space-x-1">
-                        <User className="h-4 w-4" />
-                        <span>{interview.student_name}</span>
+                        <Building2 className="h-4 w-4" />
+                        <span>{opportunity?.company_name}</span>
                       </div>
-                    )}
-                    <div className="flex items-center space-x-1">
-                      <Calendar className="h-4 w-4" />
-                      <span>{new Date(interview.date).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <Clock className="h-4 w-4" />
-                      <span>
-                        {interview.time} ({interview.duration} min)
-                      </span>
+                      {isRecruiterOrAdmin && (
+                        <div className="flex items-center space-x-1">
+                          <User className="h-4 w-4" />
+                          <span>{student?.full_name}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center space-x-1">
+                        <Calendar className="h-4 w-4" />
+                        <span>{new Date(interview.date).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <Clock className="h-4 w-4" />
+                        <span>
+                          {interview.time} ({interview.duration} min)
+                        </span>
+                      </div>
                     </div>
                   </div>
+                  <Badge className={getStatusColor(interview.status)}>
+                    {getStatusIcon(interview.status)}
+                    <span className="ml-1 capitalize">{interview.status}</span>
+                  </Badge>
                 </div>
-                <Badge className={getStatusColor(interview.status)}>
-                  {getStatusIcon(interview.status)}
-                  <span className="ml-1 capitalize">{interview.status}</span>
-                </Badge>
-              </div>
-            </CardHeader>
+              </CardHeader>
 
-            <CardContent className="space-y-4">
-              {/* Interview Details */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2 text-sm">
-                    {interview.mode === "video" ? (
-                      <Video className="h-4 w-4 text-primary" />
-                    ) : (
-                      <MapPin className="h-4 w-4 text-primary" />
-                    )}
-                    <span className="font-medium capitalize">{interview.mode}</span>
-                  </div>
-                  {interview.mode === "video" && interview.meeting_link && (
-                    <a
-                      href={interview.meeting_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-primary hover:underline block"
-                    >
-                      {interview.meeting_link}
-                    </a>
-                  )}
-                  {interview.mode === "in-person" && interview.location && (
-                    <p className="text-sm text-muted-foreground">{interview.location}</p>
-                  )}
-                </div>
-
-                {!isRecruiterOrAdmin && (
+              <CardContent className="space-y-4">
+                {/* Interview Details */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <p className="text-sm font-medium">Contact</p>
-                    <p className="text-sm text-muted-foreground">{interview.student_email}</p>
+                    <div className="flex items-center space-x-2 text-sm">
+                      {interview.mode === "video" ? (
+                        <Video className="h-4 w-4 text-primary" />
+                      ) : (
+                        <MapPin className="h-4 w-4 text-primary" />
+                      )}
+                      <span className="font-medium capitalize">{interview.mode}</span>
+                    </div>
+                    {interview.mode === "video" && interview.meeting_link && (
+                      <a
+                        href={interview.meeting_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary hover:underline block"
+                      >
+                        {interview.meeting_link}
+                      </a>
+                    )}
+                    {interview.mode === "in-person" && interview.location && (
+                      <p className="text-sm text-muted-foreground">{interview.location}</p>
+                    )}
+                  </div>
+
+                  {!isRecruiterOrAdmin && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Contact</p>
+                      <p className="text-sm text-muted-foreground">{student?.email}</p>
+                    </div>
+                  )}
+                </div>
+
+                {interview.notes && (
+                  <div className="bg-muted/50 p-3 rounded-lg">
+                    <p className="text-sm font-medium text-foreground mb-1">Notes:</p>
+                    <p className="text-sm text-muted-foreground">{interview.notes}</p>
                   </div>
                 )}
-              </div>
 
-              {interview.notes && (
-                <div className="bg-muted/50 p-3 rounded-lg">
-                  <p className="text-sm font-medium text-foreground mb-1">Notes:</p>
-                  <p className="text-sm text-muted-foreground">{interview.notes}</p>
+                {/* Actions */}
+                <div className="flex items-center justify-end space-x-2 pt-4 border-t border-border/50">
+                  {!isRecruiterOrAdmin && interview.status === "proposed" && (
+                    <>
+                      <Button
+                        size="sm"
+                        onClick={() => handleConfirmInterview(interview.id)}
+                        className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Confirm Attendance
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => handleCancelInterview(interview.id)}>
+                        <XCircle className="h-4 w-4 mr-1" />
+                        Cannot Attend
+                      </Button>
+                    </>
+                  )}
+                  {isRecruiterOrAdmin && interview.status !== "cancelled" && interview.status !== "completed" && (
+                    <Button size="sm" variant="destructive" onClick={() => handleCancelInterview(interview.id)}>
+                      Cancel Interview
+                    </Button>
+                  )}
                 </div>
-              )}
-
-              {/* Actions */}
-              <div className="flex items-center justify-end space-x-2 pt-4 border-t border-border/50">
-                {!isRecruiterOrAdmin && interview.status === "scheduled" && (
-                  <>
-                    <Button
-                      size="sm"
-                      onClick={() => handleConfirmInterview(interview.id)}
-                      className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      Confirm Attendance
-                    </Button>
-                    <Button size="sm" variant="destructive" onClick={() => handleCancelInterview(interview.id)}>
-                      <XCircle className="h-4 w-4 mr-1" />
-                      Cannot Attend
-                    </Button>
-                  </>
-                )}
-                {isRecruiterOrAdmin && (
-                  <>
-                    <Button size="sm" variant="outline">
-                      Edit
-                    </Button>
-                    <Button size="sm" variant="destructive" onClick={() => handleCancelInterview(interview.id)}>
-                      Cancel
-                    </Button>
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
 
       {/* Empty State */}

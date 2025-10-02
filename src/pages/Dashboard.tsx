@@ -17,6 +17,10 @@ import {
   CheckCircle2,
   AlertCircle,
   Building2,
+  UserCheck,
+  ClipboardCheck,
+  TrendingDown,
+  Activity,
 } from "lucide-react"
 
 interface ContextType {
@@ -61,6 +65,14 @@ const dashboardData = {
       { title: "Placement Rate", value: "78%", icon: TrendingUp, color: "text-warning" },
       { title: "This Month's Hires", value: "34", icon: CheckCircle2, color: "text-accent" },
     ],
+    workflowStats: [
+      { title: "Pending Mentor Review", value: "23", icon: UserCheck, color: "text-yellow-600", trend: "+5" },
+      { title: "Mentor Approved", value: "67", icon: ClipboardCheck, color: "text-blue-600", trend: "+12" },
+      { title: "Interviews Scheduled", value: "34", icon: Calendar, color: "text-purple-600", trend: "+8" },
+      { title: "Offers Extended", value: "28", icon: Award, color: "text-green-600", trend: "+6" },
+      { title: "Internships Completed", value: "19", icon: CheckCircle2, color: "text-teal-600", trend: "+4" },
+      { title: "Certificates Generated", value: "19", icon: Award, color: "text-orange-600", trend: "+4" },
+    ],
     recentActivities: [
       {
         action: "New opportunity posted",
@@ -89,6 +101,22 @@ const dashboardData = {
       { department: "Electronics", students: 72, placed: 58, rate: 81 },
       { department: "Mechanical", students: 84, placed: 62, rate: 74 },
     ],
+    workflowPipeline: [
+      { stage: "Applications Submitted", count: 245, percentage: 100, color: "bg-gray-500" },
+      { stage: "Pending Mentor Review", count: 23, percentage: 9, color: "bg-yellow-500" },
+      { stage: "Mentor Approved", count: 67, percentage: 27, color: "bg-blue-500" },
+      { stage: "Interview Scheduled", count: 34, percentage: 14, color: "bg-purple-500" },
+      { stage: "Offers Extended", count: 28, percentage: 11, color: "bg-green-500" },
+      { stage: "Completed & Certified", count: 19, percentage: 8, color: "bg-teal-500" },
+    ],
+    placementEligibility: {
+      total_students: 245,
+      eligible: 156,
+      not_eligible: 89,
+      with_internship: 134,
+      with_certificate: 98,
+      placement_ready: 156,
+    },
   },
   faculty_mentor: {
     stats: [
@@ -233,6 +261,122 @@ export default function Dashboard() {
           </Card>
         ))}
       </div>
+
+      {userRole === "placement_officer" && "workflowStats" in data && (
+        <>
+          <Card className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Activity className="h-5 w-5 text-primary" />
+                <span>Workflow Tracking</span>
+              </CardTitle>
+              <CardDescription>Real-time tracking of the complete placement workflow</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                {data.workflowStats.map((stat, index) => (
+                  <div
+                    key={index}
+                    className="p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-all duration-200 text-center"
+                  >
+                    <stat.icon className={`h-6 w-6 ${stat.color} mx-auto mb-2`} />
+                    <div className="text-2xl font-bold text-foreground">{stat.value}</div>
+                    <div className="text-xs text-muted-foreground mb-1">{stat.title}</div>
+                    <Badge variant="outline" className="text-xs">
+                      {stat.trend}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                <span>Workflow Pipeline</span>
+              </CardTitle>
+              <CardDescription>Visual representation of student progression through the workflow</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {data.workflowPipeline.map((stage, index) => (
+                <div key={index} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className={`w-3 h-3 rounded-full ${stage.color}`}></div>
+                      <span className="font-medium text-sm">{stage.stage}</span>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <span className="text-sm text-muted-foreground">{stage.percentage}%</span>
+                      <span className="text-lg font-bold">{stage.count}</span>
+                    </div>
+                  </div>
+                  <Progress value={stage.percentage} className="h-2" />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Target className="h-5 w-5 text-primary" />
+                <span>Placement Eligibility Overview</span>
+              </CardTitle>
+              <CardDescription>Track student readiness for final placements</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-lg bg-green-50 border border-green-200 text-center">
+                  <CheckCircle2 className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                  <div className="text-3xl font-bold text-green-700">{data.placementEligibility.eligible}</div>
+                  <div className="text-sm text-green-600">Placement Eligible</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {Math.round((data.placementEligibility.eligible / data.placementEligibility.total_students) * 100)}%
+                    of total
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-center">
+                  <TrendingDown className="h-8 w-8 text-red-600 mx-auto mb-2" />
+                  <div className="text-3xl font-bold text-red-700">{data.placementEligibility.not_eligible}</div>
+                  <div className="text-sm text-red-600">Not Yet Eligible</div>
+                  <div className="text-xs text-muted-foreground mt-1">Need internship completion</div>
+                </div>
+
+                <div className="p-4 rounded-lg bg-blue-50 border border-blue-200 text-center">
+                  <Briefcase className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                  <div className="text-3xl font-bold text-blue-700">{data.placementEligibility.with_internship}</div>
+                  <div className="text-sm text-blue-600">With Internship</div>
+                  <div className="text-xs text-muted-foreground mt-1">Completed at least one</div>
+                </div>
+
+                <div className="p-4 rounded-lg bg-purple-50 border border-purple-200 text-center">
+                  <Award className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+                  <div className="text-3xl font-bold text-purple-700">{data.placementEligibility.with_certificate}</div>
+                  <div className="text-sm text-purple-600">With Certificate</div>
+                  <div className="text-xs text-muted-foreground mt-1">Verified completion</div>
+                </div>
+
+                <div className="p-4 rounded-lg bg-teal-50 border border-teal-200 text-center">
+                  <Target className="h-8 w-8 text-teal-600 mx-auto mb-2" />
+                  <div className="text-3xl font-bold text-teal-700">{data.placementEligibility.placement_ready}</div>
+                  <div className="text-sm text-teal-600">Placement Ready</div>
+                  <div className="text-xs text-muted-foreground mt-1">Ready for final placement</div>
+                </div>
+
+                <div className="p-4 rounded-lg bg-gray-50 border border-gray-200 text-center">
+                  <Users className="h-8 w-8 text-gray-600 mx-auto mb-2" />
+                  <div className="text-3xl font-bold text-gray-700">{data.placementEligibility.total_students}</div>
+                  <div className="text-sm text-gray-600">Total Students</div>
+                  <div className="text-xs text-muted-foreground mt-1">Active in system</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Activities */}
