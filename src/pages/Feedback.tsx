@@ -161,70 +161,70 @@ export default function Feedback() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5 p-6 space-y-6">
       {/* Header */}
-      <div>
+      <div className="animate-fade-in">
         <h1 className="text-3xl font-bold text-foreground">Feedback Management</h1>
         <p className="text-muted-foreground">Provide structured feedback to improve student employability</p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-card border-border/50">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 animate-slide-up" style={{ animationDelay: "0.1s" }}>
+        <Card className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Feedback</p>
                 <p className="text-2xl font-bold text-foreground">89</p>
               </div>
-              <MessageSquare className="h-8 w-8 text-primary" />
+              <MessageSquare className="h-8 w-8 text-primary animate-pulse" />
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-card border-border/50">
+        <Card className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">This Month</p>
                 <p className="text-2xl font-bold text-accent">12</p>
               </div>
-              <Calendar className="h-8 w-8 text-accent" />
+              <Calendar className="h-8 w-8 text-accent animate-pulse" />
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-card border-border/50">
+        <Card className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Avg Rating</p>
                 <p className="text-2xl font-bold text-warning">4.2</p>
               </div>
-              <Star className="h-8 w-8 text-warning" />
+              <Star className="h-8 w-8 text-warning animate-pulse" />
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-card border-border/50">
+        <Card className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Certificates</p>
                 <p className="text-2xl font-bold text-green-600">34</p>
               </div>
-              <Award className="h-8 w-8 text-green-600" />
+              <Award className="h-8 w-8 text-green-600 animate-pulse" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Tabs defaultValue="provide" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="provide">Provide Feedback</TabsTrigger>
-          <TabsTrigger value="history">Feedback History</TabsTrigger>
+      <Tabs defaultValue="provide" className="space-y-6 animate-scale-in" style={{ animationDelay: "0.2s" }}>
+        <TabsList className="grid w-full grid-cols-2 transition-all duration-300">
+          <TabsTrigger value="provide" className="transition-all duration-200 data-[state=active]:shadow-md">Provide Feedback</TabsTrigger>
+          <TabsTrigger value="history" className="transition-all duration-200 data-[state=active]:shadow-md">Feedback History</TabsTrigger>
         </TabsList>
 
         {/* Provide Feedback Tab */}
-        <TabsContent value="provide" className="space-y-6">
-          <Card className="bg-gradient-card border-border/50">
+        <TabsContent value="provide" className="space-y-6 animate-fade-in">
+          <Card className="bg-gradient-card border-border/50 hover:shadow-xl transition-all duration-300">
             <CardHeader>
               <CardTitle>Faculty Feedback Form</CardTitle>
               <CardDescription>Provide comprehensive feedback on student performance and employability</CardDescription>

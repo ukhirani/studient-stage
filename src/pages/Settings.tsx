@@ -142,36 +142,36 @@ export default function Settings() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5 p-6 space-y-6">
       {/* Header */}
-      <div>
+      <div className="animate-fade-in">
         <h1 className="text-3xl font-bold text-foreground">Settings</h1>
         <p className="text-muted-foreground">Manage your account, privacy, and preferences</p>
       </div>
 
-      <Tabs defaultValue="account" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5 lg:w-auto">
-          <TabsTrigger value="account">Account</TabsTrigger>
-          <TabsTrigger value="preferences">Preferences</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="privacy">Privacy</TabsTrigger>
-          <TabsTrigger value="support">Support</TabsTrigger>
+      <Tabs defaultValue="account" className="space-y-6 animate-slide-up" style={{ animationDelay: "0.1s" }}>
+        <TabsList className="grid w-full grid-cols-5 lg:w-auto transition-all duration-300">
+          <TabsTrigger value="account" className="transition-all duration-200 data-[state=active]:shadow-md">Account</TabsTrigger>
+          <TabsTrigger value="preferences" className="transition-all duration-200 data-[state=active]:shadow-md">Preferences</TabsTrigger>
+          <TabsTrigger value="notifications" className="transition-all duration-200 data-[state=active]:shadow-md">Notifications</TabsTrigger>
+          <TabsTrigger value="privacy" className="transition-all duration-200 data-[state=active]:shadow-md">Privacy</TabsTrigger>
+          <TabsTrigger value="support" className="transition-all duration-200 data-[state=active]:shadow-md">Support</TabsTrigger>
         </TabsList>
 
         {/* Account Information Tab */}
-        <TabsContent value="account" className="space-y-6">
-          <Card className="bg-gradient-card border-border/50">
+        <TabsContent value="account" className="space-y-6 animate-scale-in">
+          <Card className="bg-gradient-card border-border/50 hover:shadow-xl transition-all duration-300">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <User className="h-5 w-5 text-primary" />
+                <User className="h-5 w-5 text-primary animate-pulse" />
                 <span>Account Information</span>
               </CardTitle>
               <CardDescription>Update your personal information and profile picture</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Profile Picture */}
-              <div className="flex items-center space-x-4">
-                <Avatar className="h-20 w-20">
+              <div className="flex items-center space-x-4 animate-fade-in" style={{ animationDelay: "0.2s" }}>
+                <Avatar className="h-20 w-20 ring-4 ring-primary/20 transition-all duration-300 hover:ring-primary/40 hover:scale-105">
                   <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${fullName}`} />
                   <AvatarFallback>
                     {fullName
@@ -181,7 +181,7 @@ export default function Settings() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="space-y-2">
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" className="hover:scale-105 transition-all duration-200">
                     <Upload className="h-4 w-4 mr-2" />
                     Change Picture
                   </Button>

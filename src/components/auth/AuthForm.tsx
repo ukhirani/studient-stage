@@ -100,10 +100,10 @@ export function AuthForm() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4">
-      <Card className="w-full max-w-md shadow-xl bg-gradient-card border-border/50">
-        <CardHeader className="text-center space-y-4">
+      <Card className="w-full max-w-md shadow-xl bg-gradient-card border-border/50 animate-scale-in hover:shadow-2xl transition-all duration-300">
+        <CardHeader className="text-center space-y-4 animate-fade-in">
           <div className="flex items-center justify-center space-x-2">
-            <GraduationCap className="h-8 w-8 text-primary" />
+            <GraduationCap className="h-8 w-8 text-primary animate-pulse" />
             <CardTitle className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
               Campus Connect Hub
             </CardTitle>
@@ -113,14 +113,14 @@ export function AuthForm() {
           </CardDescription>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
           <Tabs defaultValue="signin" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 transition-all duration-300">
+              <TabsTrigger value="signin" className="transition-all duration-200 data-[state=active]:shadow-md">Sign In</TabsTrigger>
+              <TabsTrigger value="signup" className="transition-all duration-200 data-[state=active]:shadow-md">Sign Up</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="signin" className="space-y-4">
+            <TabsContent value="signin" className="space-y-4 animate-fade-in">
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signin-email">Email</Label>
@@ -154,7 +154,7 @@ export function AuthForm() {
               </form>
             </TabsContent>
 
-            <TabsContent value="signup" className="space-y-4">
+            <TabsContent value="signup" className="space-y-4 animate-fade-in">
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signup-name">Full Name</Label>

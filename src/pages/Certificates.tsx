@@ -198,9 +198,9 @@ export default function Certificates() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5 p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between animate-fade-in">
         <div>
           <h1 className="text-3xl font-bold text-foreground">My Certificates</h1>
           <p className="text-muted-foreground">View and manage your internship, training, and placement certificates</p>
@@ -245,11 +245,11 @@ export default function Certificates() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {Object.entries(certificatesByStatus).map(([status, count]) => (
-          <Card key={status} className="bg-gradient-card border-border/50">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-slide-up" style={{ animationDelay: "0.1s" }}>
+        {Object.entries(certificatesByStatus).map(([status, count], idx) => (
+          <Card key={status} className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300 animate-scale-in" style={{ animationDelay: `${0.1 + idx * 0.05}s` }}>
             <CardContent className="p-4 text-center">
-              <div className="flex items-center justify-center mb-2">{getStatusIcon(status)}</div>
+              <div className="flex items-center justify-center mb-2 animate-pulse">{getStatusIcon(status)}</div>
               <div className="text-2xl font-bold text-foreground">{count}</div>
               <div className="text-xs text-muted-foreground capitalize">{status.replace("_", " ")}</div>
             </CardContent>
@@ -258,10 +258,10 @@ export default function Certificates() {
       </div>
 
       {/* Filters */}
-      <Card className="bg-gradient-card border-border/50">
+      <Card className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300 animate-slide-up" style={{ animationDelay: "0.2s" }}>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Filter className="h-5 w-5 text-primary" />
+            <Filter className="h-5 w-5 text-primary animate-pulse" />
             <span>Filters</span>
           </CardTitle>
         </CardHeader>
@@ -322,16 +322,17 @@ export default function Certificates() {
 
       {/* Certificates Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {filteredCertificates.map((certificate) => (
+        {filteredCertificates.map((certificate, idx) => (
           <Card
             key={certificate.id}
-            className="bg-gradient-card border-border/50 hover:shadow-lg transition-all duration-300"
+            className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 animate-fade-in"
+            style={{ animationDelay: `${0.3 + idx * 0.1}s` }}
           >
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="space-y-2 flex-1">
                   <CardTitle className="text-xl text-foreground flex items-start space-x-2">
-                    <Award className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
+                    <Award className="h-5 w-5 text-primary mt-1 flex-shrink-0 animate-pulse" />
                     <span>{certificate.title}</span>
                   </CardTitle>
                   <div className="flex items-center space-x-2 text-sm text-muted-foreground">

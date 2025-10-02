@@ -215,8 +215,8 @@ export default function CompanyManagement() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="bg-gradient-card border-border/50">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-slide-up" style={{ animationDelay: "0.1s" }}>
+          <Card className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">Total Companies</CardTitle>
             </CardHeader>
@@ -224,7 +224,7 @@ export default function CompanyManagement() {
               <div className="text-3xl font-bold text-foreground">{companies.length}</div>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-card border-border/50">
+          <Card className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">Active Companies</CardTitle>
             </CardHeader>
@@ -234,7 +234,7 @@ export default function CompanyManagement() {
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-card border-border/50">
+          <Card className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">Total Opportunities</CardTitle>
             </CardHeader>
@@ -263,8 +263,8 @@ export default function CompanyManagement() {
 
         {/* Companies List */}
         <div className="grid grid-cols-1 gap-4">
-          {filteredCompanies.map((company) => (
-            <Card key={company.id} className="bg-gradient-card border-border/50 hover:shadow-lg transition-shadow">
+          {filteredCompanies.map((company, idx) => (
+            <Card key={company.id} className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-[1.01] transition-all duration-300 animate-fade-in" style={{ animationDelay: `${0.2 + idx * 0.05}s` }}>
               <CardContent className="p-6">
                 <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                   <div className="flex items-start space-x-4 flex-1">

@@ -131,8 +131,8 @@ export default function UserManagement() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <Card className="bg-gradient-card border-border/50">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 animate-slide-up" style={{ animationDelay: "0.1s" }}>
+          <Card className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">Total Users</CardTitle>
             </CardHeader>
@@ -140,7 +140,7 @@ export default function UserManagement() {
               <div className="text-3xl font-bold text-foreground">{stats.total}</div>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-card border-border/50">
+          <Card className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">Active</CardTitle>
             </CardHeader>
@@ -148,7 +148,7 @@ export default function UserManagement() {
               <div className="text-3xl font-bold text-green-600">{stats.active}</div>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-card border-border/50">
+          <Card className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">Students</CardTitle>
             </CardHeader>
@@ -156,7 +156,7 @@ export default function UserManagement() {
               <div className="text-3xl font-bold text-blue-600">{stats.students}</div>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-card border-border/50">
+          <Card className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">Faculty</CardTitle>
             </CardHeader>
@@ -164,7 +164,7 @@ export default function UserManagement() {
               <div className="text-3xl font-bold text-green-600">{stats.faculty}</div>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-card border-border/50">
+          <Card className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">Recruiters</CardTitle>
             </CardHeader>
@@ -216,12 +216,12 @@ export default function UserManagement() {
 
         {/* Users List */}
         <div className="grid grid-cols-1 gap-4">
-          {filteredUsers.map((user) => {
+          {filteredUsers.map((user, idx) => {
             const RoleIcon = roleIcons[user.role]
             const roleColorClass = roleColors[user.role]
 
             return (
-              <Card key={user.id} className="bg-gradient-card border-border/50 hover:shadow-lg transition-shadow">
+              <Card key={user.id} className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-[1.01] transition-all duration-300 animate-fade-in" style={{ animationDelay: `${0.2 + idx * 0.05}s` }}>
                 <CardContent className="p-6">
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div className="flex items-start space-x-4 flex-1">

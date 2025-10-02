@@ -127,16 +127,16 @@ export function AppSidebar({ userRole, userName }: SidebarProps) {
 
   return (
     <Sidebar
-      className={`${collapsed ? "w-14" : "w-64"} border-r border-sidebar-border bg-sidebar transition-all duration-300`}
+      className={`${collapsed ? "w-14" : "w-64"} border-r border-sidebar-border bg-sidebar transition-all duration-300 shadow-lg`}
       collapsible="icon"
     >
       <SidebarContent>
         {/* Header */}
-        <div className="p-4 border-b border-sidebar-border">
+        <div className="p-4 border-b border-sidebar-border transition-all duration-300 hover:bg-sidebar-accent/30">
           <div className="flex items-center space-x-3">
             {!collapsed && (
               <>
-                <GraduationCap className="h-8 w-8 text-primary" />
+                <GraduationCap className="h-8 w-8 text-primary animate-pulse" />
                 <div>
                   <h2 className="font-bold text-sidebar-foreground">Campus Connect</h2>
                   <p className="text-xs text-sidebar-foreground/70">Hub</p>
@@ -149,9 +149,9 @@ export function AppSidebar({ userRole, userName }: SidebarProps) {
 
         {/* User Info */}
         {!collapsed && (
-          <div className="p-4 border-b border-sidebar-border">
+          <div className="p-4 border-b border-sidebar-border transition-all duration-300 hover:bg-sidebar-accent/30">
             <div className="flex items-center space-x-3">
-              <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
+              <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center ring-2 ring-primary/20 transition-all duration-300 hover:ring-primary/40 hover:scale-105">
                 <RoleIcon className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
@@ -171,7 +171,7 @@ export function AppSidebar({ userRole, userName }: SidebarProps) {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} className={getNavCls}>
-                      <item.icon className={`h-5 w-5 ${collapsed ? "mx-auto" : "mr-3"}`} />
+                      <item.icon className={`h-5 w-5 ${collapsed ? "mx-auto" : "mr-3"} transition-all duration-200 hover:scale-110`} />
                       {!collapsed && <span>{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
@@ -181,7 +181,7 @@ export function AppSidebar({ userRole, userName }: SidebarProps) {
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
                   <NavLink to="/settings" className={getNavCls}>
-                    <Settings className={`h-5 w-5 ${collapsed ? "mx-auto" : "mr-3"}`} />
+                    <Settings className={`h-5 w-5 ${collapsed ? "mx-auto" : "mr-3"} transition-all duration-200 hover:scale-110`} />
                     {!collapsed && <span>Settings</span>}
                   </NavLink>
                 </SidebarMenuButton>
@@ -197,9 +197,9 @@ export function AppSidebar({ userRole, userName }: SidebarProps) {
           variant="ghost"
           size={collapsed ? "icon" : "default"}
           onClick={handleSignOut}
-          className="w-full justify-start text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive"
+          className="w-full justify-start text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive hover:scale-105 transition-all duration-200"
         >
-          <LogOut className={`h-5 w-5 ${collapsed ? "" : "mr-3"}`} />
+          <LogOut className={`h-5 w-5 ${collapsed ? "" : "mr-3"} transition-all duration-200`} />
           {!collapsed && "Sign Out"}
         </Button>
       </SidebarFooter>

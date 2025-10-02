@@ -122,13 +122,14 @@ export default function CreateOpportunity() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5 p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center space-x-4 animate-fade-in">
         <Button 
           variant="ghost" 
           size="icon"
           onClick={() => navigate("/opportunities")}
+          className="hover:scale-110 transition-all duration-200"
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
@@ -138,10 +139,10 @@ export default function CreateOpportunity() {
         </div>
       </div>
 
-      <Card className="bg-gradient-card border-border/50">
+      <Card className="bg-gradient-card border-border/50 hover:shadow-xl transition-all duration-300 animate-scale-in" style={{ animationDelay: "0.1s" }}>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Building2 className="h-5 w-5 text-primary" />
+            <Building2 className="h-5 w-5 text-primary animate-pulse" />
             <span>Opportunity Details</span>
           </CardTitle>
           <CardDescription>
@@ -333,7 +334,7 @@ export default function CreateOpportunity() {
               <Button
                 type="submit"
                 disabled={loading}
-                className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
+                className="bg-gradient-primary hover:shadow-glow hover:scale-105 transition-all duration-300"
               >
                 <Save className="h-4 w-4 mr-2" />
                 {loading ? "Posting..." : "Post Opportunity"}
