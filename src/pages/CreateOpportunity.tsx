@@ -11,10 +11,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { supabase } from "@/integrations/supabase/client"
+import { dummyDataStore } from "@/lib/dummyData"
 import { useToast } from "@/hooks/use-toast"
 import { ArrowLeft, Save, Building2, Calendar, DollarSign, Users } from "lucide-react"
-import { VerificationBanner } from "@/components/VerificationBanner"
 
 interface ContextType {
   user: any
@@ -31,7 +30,7 @@ const departments = [
   "Information Technology",
 ]
 
-const opportunityTypes = ["internship", "full_time", "part_time", "placement"]
+const opportunityTypes = ["internship", "full-time", "training"]
 
 export default function CreateOpportunity() {
   const navigate = useNavigate()
@@ -41,7 +40,7 @@ export default function CreateOpportunity() {
 
   const [formData, setFormData] = useState({
     title: "",
-    company_name: "",
+    company_name: profile?.company_name || "",
     description: "",
     type: "",
     location: "",
@@ -54,7 +53,7 @@ export default function CreateOpportunity() {
 
   const [skillInput, setSkillInput] = useState("")
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!profile) return
 
@@ -69,33 +68,36 @@ export default function CreateOpportunity() {
     }
 
     setLoading(true)
+    
     try {
-      const { error } = await supabase.from("opportunities").insert({
+      const newOpportunity = dummyDataStore.addOpportunity({
         title: formData.title,
         company_name: formData.company_name,
-        description: formData.description || null,
-        type: formData.type as "internship" | "full_time" | "part_time" | "placement",
-        location: formData.location || null,
-        stipend_amount: formData.stipend_amount ? Number.parseInt(formData.stipend_amount) : null,
-        min_cgpa: formData.min_cgpa ? Number.parseFloat(formData.min_cgpa) : null,
+        description: formData.description || "",
+        type: formData.type as "internship" | "full-time" | "training",
+        location: formData.location || "",
+        stipend_amount: formData.stipend_amount || "",
+        min_cgpa: formData.min_cgpa || "",
         deadline: formData.deadline,
-        departments: formData.departments.length > 0 ? formData.departments : null,
-        required_skills: formData.required_skills.length > 0 ? formData.required_skills : null,
-        posted_by: profile.user_id,
+        departments: formData.departments.length > 0 ? formData.departments : [],
+        required_skills: formData.required_skills.length > 0 ? formData.required_skills : [],
+        is_active: true,
+        interview_rounds: 3,
+        recruiter_id: profile.user_id,
       })
-
-      if (error) throw error
 
       toast({
         title: "Opportunity posted!",
-        description: "Your opportunity has been posted successfully.",
+        description: "Your opportunity has been posted successfully and is now visible to students.",
       })
 
-      navigate("/opportunities")
+      setTimeout(() => {
+        navigate("/my-opportunities")
+      }, 1000)
     } catch (error: any) {
       toast({
         title: "Error posting opportunity",
-        description: error.message,
+        description: error.message || "Failed to post opportunity",
         variant: "destructive",
       })
     } finally {
@@ -129,8 +131,6 @@ export default function CreateOpportunity() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5 p-6 space-y-6">
-      <VerificationBanner profile={profile} />
-
       <div className="flex items-center space-x-4 animate-fade-in">
         <Button
           variant="ghost"

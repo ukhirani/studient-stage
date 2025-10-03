@@ -10,15 +10,17 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { supabase } from "@/integrations/supabase/client"
+import { useDummyAuth } from "@/contexts/DummyAuthContext"
 import { useToast } from "@/hooks/use-toast"
-import { GraduationCap, Users, UserCheck, Building } from "lucide-react"
+import { GraduationCap, Users, UserCheck, Building, Info } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 const roleIcons = {
   student: GraduationCap,
   placement_officer: Users,
   faculty_mentor: UserCheck,
   recruiter: Building,
+  admin: Users,
 }
 
 export function AuthForm() {
@@ -27,48 +29,34 @@ export function AuthForm() {
     email: "",
     password: "",
     fullName: "",
-    role: "student" as "student" | "placement_officer" | "faculty_mentor" | "recruiter",
+    role: "student" as "student" | "placement_officer" | "faculty_mentor" | "recruiter" | "admin",
     companyName: "",
     industry: "",
   })
 
   const { toast } = useToast()
   const navigate = useNavigate()
+  const { signIn, signUp } = useDummyAuth()
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
     try {
-      const redirectUrl = `${window.location.origin}/`
-
-      const metadata: any = {
-        full_name: formData.fullName,
-        role: formData.role,
-      }
-
-      if (formData.role === "recruiter") {
-        metadata.company_name = formData.companyName
-        metadata.industry = formData.industry
-      }
-
-      const { error } = await supabase.auth.signUp({
+      const { error } = await signUp({
         email: formData.email,
         password: formData.password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: metadata,
-        },
+        fullName: formData.fullName,
+        role: formData.role,
+        companyName: formData.companyName,
+        industry: formData.industry,
       })
 
       if (error) throw error
 
       toast({
-        title: "Account created successfully!",
-        description:
-          formData.role === "recruiter"
-            ? "Please check your email to verify your account. Your recruiter account will be reviewed by a placement officer."
-            : "Please check your email to verify your account.",
+        title: "Demo Mode",
+        description: "Sign up is disabled in demo mode. Please use one of the predefined accounts to sign in.",
       })
     } catch (error: any) {
       toast({
@@ -86,10 +74,7 @@ export function AuthForm() {
     setIsLoading(true)
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password,
-      })
+      const { error } = await signIn(formData.email, formData.password)
 
       if (error) throw error
 
@@ -102,7 +87,7 @@ export function AuthForm() {
     } catch (error: any) {
       toast({
         title: "Sign in failed",
-        description: error.message,
+        description: error.message || "Invalid email or password",
         variant: "destructive",
       })
     } finally {
@@ -141,6 +126,16 @@ export function AuthForm() {
             </TabsList>
 
             <TabsContent value="signin" className="space-y-4 animate-fade-in">
+              <Alert className="mb-4">
+                <Info className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  <strong>Demo Accounts:</strong><br/>
+                  Admin: admin@university.edu / admin123<br/>
+                  Recruiter: recruiter@techcorp.com / recruiter123<br/>
+                  Mentor: mentor@university.edu / mentor123<br/>
+                  Student: rahul.sharma@university.edu / student123
+                </AlertDescription>
+              </Alert>
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signin-email">Email</Label>

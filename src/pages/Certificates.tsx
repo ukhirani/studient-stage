@@ -18,7 +18,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
-import { supabase } from "@/integrations/supabase/client"
+import { dummyDataStore } from "@/lib/dummyData"
 import { Award, Search, Filter, Download, CheckCircle, Upload, Eye, QrCode, Building2, User, Plus } from "lucide-react"
 
 interface ContextType {
@@ -59,129 +59,92 @@ export default function Certificates() {
     }
   }, [profile])
 
-  const fetchCertificates = async () => {
+  const fetchCertificates = () => {
     if (!profile) return
 
-    try {
-      setLoading(true)
-
-      let query = supabase.from("certificates").select("*")
+    setLoading(true)
+    setTimeout(() => {
+      let certs = [...dummyDataStore.certificates]
 
       if (profile.role === "student") {
-        query = query.eq("student_id", profile.user_id)
+        certs = dummyDataStore.getCertificatesForStudent(profile.user_id)
       }
 
-      const { data, error } = await query.order("issue_date", { ascending: false })
+      // Sort by issue date
+      certs.sort((a, b) => new Date(b.issue_date).getTime() - new Date(a.issue_date).getTime())
 
-      if (error) throw error
+      // Add related data
+      const certificatesWithData = certs.map((cert) => {
+        const studentProfile = dummyDataStore.getUserProfile(cert.student_id)
+        const company = cert.company_id 
+          ? dummyDataStore.companies.find(c => c.id === cert.company_id)
+          : null
 
-      // Fetch related data for each certificate
-      const certificatesWithData = await Promise.all(
-        (data || []).map(async (cert) => {
-          const [studentData, companyData] = await Promise.all([
-            supabase.from("profiles").select("full_name, email").eq("user_id", cert.student_id).single(),
-            cert.company_id
-              ? supabase.from("companies").select("name").eq("id", cert.company_id).single()
-              : Promise.resolve({ data: null }),
-          ])
-
-          return {
-            ...cert,
-            student: studentData.data,
-            company: companyData.data,
-          }
-        }),
-      )
+        return {
+          ...cert,
+          student: studentProfile,
+          company: company,
+        }
+      })
 
       setCertificates(certificatesWithData)
-    } catch (error: any) {
-      console.error("[v0] Error loading certificates:", error)
+      setLoading(false)
+    }, 300)
+  }
+
+  const fetchCompletedApplications = () => {
+    const completedApps = dummyDataStore.applications.filter(a => 
+      a.status === "internship_completed" || a.status === "placed" || a.status === "selected"
+    )
+
+    const applicationsWithData = completedApps.map((app) => {
+      const opportunity = dummyDataStore.opportunities.find(o => o.id === app.opportunity_id)
+      const studentProfile = dummyDataStore.getUserProfile(app.student_id)
+
+      return {
+        ...app,
+        opportunity: opportunity,
+        student: studentProfile,
+      }
+    })
+
+    setApplications(applicationsWithData)
+  }
+
+  const fetchCompanies = () => {
+    const verifiedCompanies = dummyDataStore.companies.filter(c => c.status === "verified")
+    setCompanies(verifiedCompanies)
+  }
+
+  const handleCreateCertificate = () => {
+    if (!newCertificate.student_id || !newCertificate.title || !newCertificate.certificate_type) {
       toast({
-        title: "Error loading certificates",
-        description: error.message,
+        title: "Missing required fields",
+        description: "Please fill in all required fields",
         variant: "destructive",
       })
-    } finally {
-      setLoading(false)
+      return
     }
-  }
 
-  const fetchCompletedApplications = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("applications")
-        .select("id, student_id, opportunity_id")
-        .in("status", ["internship_completed", "placed"])
+    const certificate = dummyDataStore.addCertificate({
+      student_id: newCertificate.student_id,
+      application_id: newCertificate.application_id || undefined,
+      company_id: newCertificate.company_id || undefined,
+      certificate_type: newCertificate.certificate_type as "internship" | "placement" | "training",
+      title: newCertificate.title,
+      description: newCertificate.description || "",
+      issue_date: newCertificate.issue_date,
+      certificate_url: newCertificate.certificate_url || `/certificates/${newCertificate.student_id}-${Date.now()}.pdf`,
+      verification_id: `CERT-2024-${Date.now().toString().slice(-8)}`,
+      status: "generated",
+    })
 
-      if (error) throw error
+    toast({
+      title: "Certificate created",
+      description: "The certificate has been generated successfully.",
+    })
 
-      const applicationsWithData = await Promise.all(
-        (data || []).map(async (app) => {
-          const [opportunityData, profileData] = await Promise.all([
-            supabase.from("opportunities").select("title, company_name").eq("id", app.opportunity_id).single(),
-            supabase.from("profiles").select("full_name").eq("user_id", app.student_id).single(),
-          ])
-
-          return {
-            ...app,
-            opportunity: opportunityData.data,
-            student: profileData.data,
-          }
-        }),
-      )
-
-      setApplications(applicationsWithData)
-    } catch (error: any) {
-      console.error("[v0] Error fetching applications:", error)
-    }
-  }
-
-  const fetchCompanies = async () => {
-    try {
-      const { data, error } = await supabase.from("companies").select("id, name").eq("status", "verified")
-
-      if (error) throw error
-      setCompanies(data || [])
-    } catch (error: any) {
-      console.error("[v0] Error fetching companies:", error)
-    }
-  }
-
-  const handleCreateCertificate = async () => {
-    try {
-      if (!newCertificate.student_id || !newCertificate.title || !newCertificate.certificate_type) {
-        toast({
-          title: "Missing required fields",
-          description: "Please fill in all required fields",
-          variant: "destructive",
-        })
-        return
-      }
-
-      const { data, error } = await supabase
-        .from("certificates")
-        .insert([{
-          student_id: newCertificate.student_id,
-          application_id: newCertificate.application_id || null,
-          company_id: newCertificate.company_id || null,
-          certificate_type: newCertificate.certificate_type as "achievement" | "internship" | "placement" | "training",
-          title: newCertificate.title,
-          description: newCertificate.description || null,
-          issue_date: newCertificate.issue_date,
-          certificate_url: newCertificate.certificate_url || null,
-          issued_by: profile.user_id,
-        }])
-        .select()
-        .single()
-
-      if (error) throw error
-
-      toast({
-        title: "Certificate created",
-        description: "The certificate has been generated successfully.",
-      })
-
-      setShowCreateDialog(false)
+    setShowCreateDialog(false)
       setNewCertificate({
         student_id: "",
         application_id: "",
@@ -193,15 +156,7 @@ export default function Certificates() {
         certificate_url: "",
       })
 
-      fetchCertificates()
-    } catch (error: any) {
-      console.error("[v0] Error creating certificate:", error)
-      toast({
-        title: "Error creating certificate",
-        description: error.message,
-        variant: "destructive",
-      })
-    }
+    fetchCertificates()
   }
 
   const handleUpload = () => {
