@@ -1,4 +1,17 @@
-# Welcome to your Lovable project
+# Campus Placement Portal - Student Stage
+
+A comprehensive campus placement management system built with React, TypeScript, and Supabase.
+
+## 🎯 Demo Guide
+
+**📖 For a complete demo walkthrough with pre-loaded realistic data, see [DEMO_GUIDE.md](./DEMO_GUIDE.md)**
+
+The system comes with realistic dummy data including:
+- 3 Companies (Google, Amazon, Microsoft)
+- 3 Job Opportunities
+- 5 Students with applications
+- Complete workflow from application to placement
+- 2 successful placements with certificates
 
 ## Project info
 
