@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { supabase } from "@/integrations/supabase/client"
+import { dummyDataStore } from "@/lib/dummyData"
 import { useToast } from "@/hooks/use-toast"
 import {
   Calendar,
@@ -72,116 +72,69 @@ export default function Schedule() {
     }
   }, [profile, applicationIdFromUrl])
 
-  const fetchInterviews = async () => {
+  const fetchInterviews = () => {
     if (!profile) return
 
-    try {
-      setLoading(true)
-
-      let query = supabase.from("interviews").select("*")
+    setLoading(true)
+    setTimeout(() => {
+      let interviews = [...dummyDataStore.interviews]
 
       // Filter based on role
       if (profile.role === "student") {
-        // Get student's interviews through their applications
-        const { data: studentApps } = await supabase.from("applications").select("id").eq("student_id", profile.user_id)
-
-        const appIds = studentApps?.map((app) => app.id) || []
-        if (appIds.length > 0) {
-          query = query.in("application_id", appIds)
-        } else {
-          setInterviews([])
-          setLoading(false)
-          return
-        }
+        const studentApps = dummyDataStore.getApplicationsForStudent(profile.user_id)
+        const appIds = studentApps.map(app => app.id)
+        interviews = interviews.filter(i => appIds.includes(i.application_id))
       }
 
-      const { data, error } = await query
-        .order("scheduled_date", { ascending: true })
-        .order("scheduled_time", { ascending: true })
-
-      if (error) throw error
-
-      // Fetch related data for each interview
-      const interviewsWithData = await Promise.all(
-        (data || []).map(async (interview) => {
-          const { data: application } = await supabase
-            .from("applications")
-            .select("id, student_id, opportunity_id")
-            .eq("id", interview.application_id)
-            .single()
-
-          if (!application) return { ...interview, application: null }
-
-          const [opportunityData, profileData] = await Promise.all([
-            supabase
-              .from("opportunities")
-              .select("title, company_name, type")
-              .eq("id", application.opportunity_id)
-              .single(),
-            supabase.from("profiles").select("full_name, email").eq("user_id", application.student_id).single(),
-          ])
-
-          return {
-            ...interview,
-            application: {
-              ...application,
-              opportunities: opportunityData.data,
-              profiles: profileData.data,
-            },
-          }
-        }),
+      // Sort by date
+      interviews.sort((a, b) => 
+        new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
       )
+
+      // Add related data
+      const interviewsWithData = interviews.map((interview) => {
+        const application = dummyDataStore.applications.find(a => a.id === interview.application_id)
+        
+        if (!application) return { ...interview, application: null }
+
+        const opportunity = dummyDataStore.opportunities.find(o => o.id === application.opportunity_id)
+        const studentProfile = dummyDataStore.getUserProfile(application.student_id)
+
+        return {
+          ...interview,
+          application: {
+            ...application,
+            opportunities: opportunity,
+            profiles: studentProfile,
+          },
+        }
+      })
 
       setInterviews(interviewsWithData)
-    } catch (error: any) {
-      console.error("[v0] Error loading interviews:", error)
-      toast({
-        title: "Error loading interviews",
-        description: error.message,
-        variant: "destructive",
-      })
-    } finally {
       setLoading(false)
-    }
+    }, 300)
   }
 
-  const fetchShortlistedApplications = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("applications")
-        .select("id, student_id, opportunity_id")
-        .eq("status", "shortlisted")
-        .order("applied_at", { ascending: false })
+  const fetchShortlistedApplications = () => {
+    const shortlistedApps = dummyDataStore.applications.filter(a => 
+      a.status === "shortlisted" || a.status === "interview_scheduled"
+    )
 
-      if (error) throw error
+    const applicationsWithData = shortlistedApps.map(app => {
+      const opportunity = dummyDataStore.opportunities.find(o => o.id === app.opportunity_id)
+      const studentProfile = dummyDataStore.getUserProfile(app.student_id)
 
-      const applicationsWithData = await Promise.all(
-        (data || []).map(async (app) => {
-          const [opportunityData, profileData] = await Promise.all([
-            supabase
-              .from("opportunities")
-              .select("title, company_name, interview_rounds")
-              .eq("id", app.opportunity_id)
-              .single(),
-            supabase.from("profiles").select("full_name, email").eq("user_id", app.student_id).single(),
-          ])
+      return {
+        ...app,
+        opportunities: opportunity,
+        profiles: studentProfile,
+      }
+    })
 
-          return {
-            ...app,
-            opportunities: opportunityData.data,
-            profiles: profileData.data,
-          }
-        }),
-      )
-
-      setApplications(applicationsWithData)
-    } catch (error: any) {
-      console.error("[v0] Error fetching applications:", error)
-    }
+    setApplications(applicationsWithData)
   }
 
-  const handleCreateInterview = async () => {
-    try {
+  const handleCreateInterview = () => {
       if (!newInterview.application_id || !newInterview.scheduled_date || !newInterview.scheduled_time) {
         toast({
           title: "Missing required fields",
@@ -209,46 +162,26 @@ export default function Schedule() {
         return
       }
 
-      const selectedApp = applications.find((a) => a.id === newInterview.application_id)
-      const ir = selectedApp?.opportunities?.interview_rounds
-      const rounds: string[] = Array.isArray(ir?.rounds) ? ir.rounds : Array.isArray(ir) ? ir : []
-      const roundIndex = Math.max(1, Number.parseInt(newInterview.round_number || "1")) - 1
-      const roundName = rounds[roundIndex] || `Round ${roundIndex + 1}`
+      const roundNumber = Number.parseInt(newInterview.round_number || "1")
 
-      // Create interview with round metadata
-      const { data: interview, error: interviewError } = await supabase
-        .from("interviews")
-        .insert([
-          {
-            application_id: newInterview.application_id,
-            scheduled_date: newInterview.scheduled_date,
-            scheduled_time: newInterview.scheduled_time,
-            duration_minutes: Number.parseInt(newInterview.duration_minutes),
-            mode: newInterview.mode as "offline" | "online" | "phone",
-            location: newInterview.mode === "offline" ? newInterview.location : null,
-            meeting_link: newInterview.mode === "online" ? newInterview.meeting_link : null,
-            round_number: roundIndex + 1,
-            round_name: roundName,
-            notes: newInterview.notes || null,
-            status: "scheduled",
-            created_by: profile.user_id,
-          },
-        ])
-        .select()
-        .single()
+      // Create scheduled_at from date and time
+      const scheduledAt = `${newInterview.scheduled_date}T${newInterview.scheduled_time}:00Z`
 
-      if (interviewError) throw interviewError
+      const interview = dummyDataStore.addInterview({
+        application_id: newInterview.application_id,
+        round_number: roundNumber,
+        scheduled_at: scheduledAt,
+        interview_mode: newInterview.mode as "online" | "offline" | "phone",
+        meeting_link: newInterview.mode === "online" ? newInterview.meeting_link : undefined,
+        location: newInterview.mode === "offline" ? newInterview.location : undefined,
+        interviewer_name: "Interview Panel",
+        status: "scheduled",
+      })
 
-      const { error: appError } = await supabase
-        .from("applications")
-        .update({
-          status: "interview_scheduled",
-          current_round: roundIndex + 1,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", newInterview.application_id)
-
-      if (appError) throw appError
+      // Update application status
+      dummyDataStore.updateApplication(newInterview.application_id, {
+        status: "interview_scheduled",
+      })
 
       toast({
         title: "Interview scheduled",
@@ -270,77 +203,43 @@ export default function Schedule() {
 
       fetchInterviews()
       fetchShortlistedApplications()
-    } catch (error: any) {
-      console.error("[v0] Error scheduling interview:", error)
-      toast({
-        title: "Error scheduling interview",
-        description: error.message,
-        variant: "destructive",
-      })
-    }
   }
 
-  const handleConfirmInterview = async (interviewId: string) => {
-    try {
-      const { error } = await supabase.from("interviews").update({ status: "confirmed" }).eq("id", interviewId)
+  const handleConfirmInterview = (interviewId: string) => {
+    const updated = dummyDataStore.updateInterview(interviewId, { status: "scheduled" })
 
-      if (error) throw error
-
+    if (updated) {
       toast({
         title: "Interview confirmed",
         description: "You have confirmed your attendance for this interview.",
       })
 
       fetchInterviews()
-    } catch (error: any) {
-      toast({
-        title: "Error confirming interview",
-        description: error.message,
-        variant: "destructive",
-      })
     }
   }
 
-  const handleCancelInterview = async (interviewId: string) => {
-    try {
-      const { error } = await supabase.from("interviews").update({ status: "cancelled" }).eq("id", interviewId)
+  const handleCancelInterview = (interviewId: string) => {
+    const updated = dummyDataStore.updateInterview(interviewId, { status: "cancelled" })
 
-      if (error) throw error
-
+    if (updated) {
       toast({
         title: "Interview cancelled",
-        description: "The interview has been cancelled and all parties notified.",
-        variant: "destructive",
-      })
-
-      fetchInterviews()
-    } catch (error: any) {
-      toast({
-        title: "Error cancelling interview",
         description: error.message,
         variant: "destructive",
       })
     }
   }
 
-  const handleCompleteInterview = async (interviewId: string) => {
-    try {
-      const { error } = await supabase.from("interviews").update({ status: "completed" }).eq("id", interviewId)
+  const handleCompleteInterview = (interviewId: string) => {
+    const updated = dummyDataStore.updateInterview(interviewId, { status: "completed" })
 
-      if (error) throw error
-
+    if (updated) {
       toast({
         title: "Interview marked as completed",
         description: "The interview has been marked as completed.",
       })
 
       fetchInterviews()
-    } catch (error: any) {
-      toast({
-        title: "Error completing interview",
-        description: error.message,
-        variant: "destructive",
-      })
     }
   }
 
