@@ -18,10 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { Building2, Plus, Search, Edit, Trash2, MapPin, Briefcase, CheckCircle, XCircle, Clock } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { supabase } from "@/integrations/supabase/client"
-import type { Tables } from "@/integrations/supabase/types"
-
-type Company = Tables<"companies">
+import { dummyDataStore, DummyCompany } from "@/lib/dummyData"
 
 interface ContextType {
   profile: any
@@ -33,8 +30,8 @@ export default function CompanyManagement() {
   const [searchQuery, setSearchQuery] = useState("")
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null)
-  const [companies, setCompanies] = useState<Company[]>([])
+  const [selectedCompany, setSelectedCompany] = useState<DummyCompany | null>(null)
+  const [companies, setCompanies] = useState<DummyCompany[]>([])
   const [loading, setLoading] = useState(true)
   const [newCompany, setNewCompany] = useState({
     name: "",
@@ -51,26 +48,16 @@ export default function CompanyManagement() {
     fetchCompanies()
   }, [])
 
-  const fetchCompanies = async () => {
-    try {
-      setLoading(true)
-      const { data, error } = await supabase.from("companies").select("*").order("created_at", { ascending: false })
-
-      if (error) throw error
-      setCompanies(data || [])
-    } catch (error: any) {
-      console.error("[v0] Error fetching companies:", error)
-      toast({
-        title: "Error loading companies",
-        description: error.message,
-        variant: "destructive",
-      })
-    } finally {
+  const fetchCompanies = () => {
+    setLoading(true)
+    // Simulate async operation
+    setTimeout(() => {
+      setCompanies([...dummyDataStore.companies])
       setLoading(false)
-    }
+    }, 300)
   }
 
-  const handleAddCompany = async () => {
+  const handleAddCompany = () => {
     if (!newCompany.name || !newCompany.industry) {
       toast({
         title: "Missing information",
@@ -80,108 +67,64 @@ export default function CompanyManagement() {
       return
     }
 
-    try {
-      const { data, error } = await supabase
-        .from("companies")
-        .insert({
-          name: newCompany.name,
-          industry: newCompany.industry,
-          address: newCompany.address || null,
-          website: newCompany.website || null,
-          description: newCompany.description || null,
-          contact_email: newCompany.contact_email || null,
-          contact_phone: newCompany.contact_phone || null,
-          logo_url: newCompany.logo_url || null,
-          status: "pending",
-        })
-        .select()
-        .single()
+    const addedCompany = dummyDataStore.addCompany({
+      name: newCompany.name,
+      industry: newCompany.industry,
+      address: newCompany.address || "",
+      website: newCompany.website || "",
+      description: newCompany.description || "",
+      contact_email: newCompany.contact_email || "",
+      contact_phone: newCompany.contact_phone || "",
+      logo_url: newCompany.logo_url || "",
+      status: "verified",
+    })
 
-      if (error) throw error
+    setCompanies([addedCompany, ...companies])
+    setIsAddDialogOpen(false)
+    setNewCompany({
+      name: "",
+      industry: "",
+      address: "",
+      website: "",
+      description: "",
+      contact_email: "",
+      contact_phone: "",
+      logo_url: "",
+    })
 
-      setCompanies([data, ...companies])
-      setIsAddDialogOpen(false)
-      setNewCompany({
-        name: "",
-        industry: "",
-        address: "",
-        website: "",
-        description: "",
-        contact_email: "",
-        contact_phone: "",
-        logo_url: "",
-      })
-
-      toast({
-        title: "Company added",
-        description: `${data.name} has been added successfully`,
-      })
-    } catch (error: any) {
-      console.error("[v0] Error adding company:", error)
-      toast({
-        title: "Error adding company",
-        description: error.message,
-        variant: "destructive",
-      })
-    }
+    toast({
+      title: "Company added",
+      description: `${addedCompany.name} has been added successfully`,
+    })
   }
 
-  const handleUpdateStatus = async (companyId: string, status: "verified" | "rejected") => {
-    try {
-      const { error } = await supabase
-        .from("companies")
-        .update({
-          status,
-          verified_by: profile.user_id,
-          verified_at: new Date().toISOString(),
-        })
-        .eq("id", companyId)
-
-      if (error) throw error
-
-      setCompanies(
-        companies.map((c) =>
-          c.id === companyId
-            ? { ...c, status, verified_by: profile.user_id, verified_at: new Date().toISOString() }
-            : c,
-        ),
-      )
-
+  const handleUpdateStatus = (companyId: string, status: "verified" | "rejected") => {
+    const updated = dummyDataStore.updateCompany(companyId, { status })
+    if (updated) {
+      setCompanies(companies.map((c) => (c.id === companyId ? updated : c)))
       toast({
         title: `Company ${status}`,
         description: `The company has been ${status} successfully`,
       })
-    } catch (error: any) {
-      console.error("[v0] Error updating company status:", error)
-      toast({
-        title: "Error updating status",
-        description: error.message,
-        variant: "destructive",
-      })
     }
   }
 
-  const handleEditCompany = async () => {
+  const handleEditCompany = () => {
     if (!selectedCompany) return
 
-    try {
-      const { error } = await supabase
-        .from("companies")
-        .update({
-          name: selectedCompany.name,
-          industry: selectedCompany.industry,
-          address: selectedCompany.address,
-          website: selectedCompany.website,
-          description: selectedCompany.description,
-          contact_email: selectedCompany.contact_email,
-          contact_phone: selectedCompany.contact_phone,
-          logo_url: selectedCompany.logo_url,
-        })
-        .eq("id", selectedCompany.id)
+    const updated = dummyDataStore.updateCompany(selectedCompany.id, {
+      name: selectedCompany.name,
+      industry: selectedCompany.industry,
+      address: selectedCompany.address,
+      website: selectedCompany.website,
+      description: selectedCompany.description,
+      contact_email: selectedCompany.contact_email,
+      contact_phone: selectedCompany.contact_phone,
+      logo_url: selectedCompany.logo_url,
+    })
 
-      if (error) throw error
-
-      setCompanies(companies.map((c) => (c.id === selectedCompany.id ? selectedCompany : c)))
+    if (updated) {
+      setCompanies(companies.map((c) => (c.id === selectedCompany.id ? updated : c)))
       setIsEditDialogOpen(false)
       setSelectedCompany(null)
 
@@ -189,37 +132,19 @@ export default function CompanyManagement() {
         title: "Company updated",
         description: "Company details have been updated successfully",
       })
-    } catch (error: any) {
-      console.error("[v0] Error updating company:", error)
-      toast({
-        title: "Error updating company",
-        description: error.message,
-        variant: "destructive",
-      })
     }
   }
 
-  const handleDeleteCompany = async (id: string) => {
+  const handleDeleteCompany = (id: string) => {
     if (!confirm("Are you sure you want to delete this company? This action cannot be undone.")) {
       return
     }
 
-    try {
-      const { error } = await supabase.from("companies").delete().eq("id", id)
-
-      if (error) throw error
-
+    if (dummyDataStore.deleteCompany(id)) {
       setCompanies(companies.filter((c) => c.id !== id))
       toast({
         title: "Company removed",
         description: "The company has been removed from the system",
-      })
-    } catch (error: any) {
-      console.error("[v0] Error deleting company:", error)
-      toast({
-        title: "Error deleting company",
-        description: error.message,
-        variant: "destructive",
       })
     }
   }
