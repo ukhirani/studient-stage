@@ -26,7 +26,6 @@ import {
   Calendar,
   Filter,
   TrendingUp,
-  FileText,
   Building2,
   GraduationCap,
   Award,
@@ -75,7 +74,7 @@ export default function MyOpportunities() {
             .eq("opportunity_id", opp.id)
 
           return { ...opp, applicant_count: count || 0 }
-        })
+        }),
       )
 
       setOpportunities(opportunitiesWithCounts)
@@ -112,7 +111,7 @@ export default function MyOpportunities() {
             profile: profileData.data,
             student_profile: studentData.data,
           }
-        })
+        }),
       )
 
       setApplicants(applicantsWithDetails)
@@ -226,7 +225,7 @@ export default function MyOpportunities() {
           <p className="text-muted-foreground">Manage your posted opportunities and view applicants</p>
         </div>
         <Button
-          onClick={() => navigate("/opportunities/create")}
+          onClick={() => navigate("/opportunities/new")}
           className="bg-gradient-primary hover:shadow-glow hover:scale-105 transition-all duration-300"
         >
           <Briefcase className="h-4 w-4 mr-2" />
@@ -234,11 +233,13 @@ export default function MyOpportunities() {
         </Button>
       </div>
 
-      <Card className="bg-gradient-card border-border/50 hover:shadow-md transition-all duration-300 animate-fade-in"
-        style={{ animationDelay: "0.1s" }}>
+      <Card
+        className="bg-gradient-card border-border/50 hover:shadow-md transition-all duration-300 animate-fade-in"
+        style={{ animationDelay: "0.1s" }}
+      >
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Search className="h-5 w-5 text-primary" />
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <span>Filters</span>
           </CardTitle>
         </CardHeader>
@@ -291,9 +292,7 @@ export default function MyOpportunities() {
                     <span>{opp.company_name}</span>
                   </CardDescription>
                 </div>
-                <Badge className="ml-2">
-                  {opp.type.charAt(0).toUpperCase() + opp.type.slice(1).replace("_", " ")}
-                </Badge>
+                <Badge className="ml-2">{opp.type.charAt(0).toUpperCase() + opp.type.slice(1).replace("_", " ")}</Badge>
               </div>
             </CardHeader>
 
@@ -319,9 +318,7 @@ export default function MyOpportunities() {
                   <div className="flex items-center justify-center mb-1">
                     <TrendingUp className="h-5 w-5 text-green-600" />
                   </div>
-                  <p className="text-sm font-semibold text-foreground">
-                    {opp.is_active ? "Active" : "Closed"}
-                  </p>
+                  <p className="text-sm font-semibold text-foreground">{opp.is_active ? "Active" : "Closed"}</p>
                   <p className="text-xs text-muted-foreground">Status</p>
                 </div>
               </div>
@@ -394,7 +391,9 @@ export default function MyOpportunities() {
                                     </div>
                                     <div>
                                       <p className="text-xs text-muted-foreground">Department</p>
-                                      <p className="font-semibold text-sm">{applicant.student_profile?.department || "N/A"}</p>
+                                      <p className="font-semibold text-sm">
+                                        {applicant.student_profile?.department || "N/A"}
+                                      </p>
                                     </div>
                                     <div>
                                       <p className="text-xs text-muted-foreground">Applied</p>
@@ -443,7 +442,10 @@ export default function MyOpportunities() {
                                     size="sm"
                                     variant="outline"
                                     onClick={() =>
-                                      downloadResume(applicant.student_profile?.resume_url, applicant.profile?.full_name)
+                                      downloadResume(
+                                        applicant.student_profile?.resume_url,
+                                        applicant.profile?.full_name,
+                                      )
                                     }
                                     disabled={!applicant.student_profile?.resume_url}
                                   >

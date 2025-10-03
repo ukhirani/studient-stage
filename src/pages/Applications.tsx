@@ -91,11 +91,19 @@ export default function Applications() {
               .select("*")
               .eq("application_id", app.id)
               .order("scheduled_date", { ascending: true })
-              .order("scheduled_time", { ascending: true })
-              .limit(1),
+              .order("scheduled_time", { ascending: true }),
           ])
 
-          const nextInterview = Array.isArray(interviewData.data) ? interviewData.data[0] : null
+          // pick next upcoming interview, fallback to latest if all are in the past
+          let nextInterview = null as any
+          if (Array.isArray(interviewData.data) && interviewData.data.length > 0) {
+            const now = new Date()
+            nextInterview =
+              interviewData.data.find((i) => {
+                const dt = new Date(`${i.scheduled_date}T${i.scheduled_time}`)
+                return dt >= now
+              }) || interviewData.data[interviewData.data.length - 1]
+          }
 
           return {
             ...app,
@@ -462,8 +470,8 @@ export default function Applications() {
                   <div className="flex flex-wrap items-center gap-3">
                     {roundNames.map((name: string, idx: number) => {
                       const step = idx + 1
-                      const done = currentRound > idx
-                      const active = currentRound === idx
+                      const done = (application.current_round ?? 0) > step
+                      const active = (application.current_round ?? 0) === step
                       return (
                         <div
                           key={idx}
