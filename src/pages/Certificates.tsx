@@ -160,17 +160,17 @@ export default function Certificates() {
 
       const { data, error } = await supabase
         .from("certificates")
-        .insert({
+        .insert([{
           student_id: newCertificate.student_id,
           application_id: newCertificate.application_id || null,
           company_id: newCertificate.company_id || null,
-          certificate_type: newCertificate.certificate_type,
+          certificate_type: newCertificate.certificate_type as "achievement" | "internship" | "placement" | "training",
           title: newCertificate.title,
           description: newCertificate.description || null,
           issue_date: newCertificate.issue_date,
           certificate_url: newCertificate.certificate_url || null,
           issued_by: profile.user_id,
-        })
+        }])
         .select()
         .single()
 

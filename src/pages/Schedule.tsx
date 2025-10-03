@@ -208,18 +208,18 @@ export default function Schedule() {
       // Create interview
       const { data: interview, error: interviewError } = await supabase
         .from("interviews")
-        .insert({
+        .insert([{
           application_id: newInterview.application_id,
           scheduled_date: newInterview.scheduled_date,
           scheduled_time: newInterview.scheduled_time,
           duration_minutes: Number.parseInt(newInterview.duration_minutes),
-          mode: newInterview.mode,
+          mode: newInterview.mode as "offline" | "online" | "phone",
           location: newInterview.mode === "offline" ? newInterview.location : null,
           meeting_link: newInterview.mode === "online" ? newInterview.meeting_link : null,
           notes: newInterview.notes || null,
           status: "scheduled",
           created_by: profile.user_id,
-        })
+        }])
         .select()
         .single()
 
