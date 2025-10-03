@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { supabase } from "@/integrations/supabase/client"
+import { dummyDataStore } from "@/lib/dummyData"
 import { useToast } from "@/hooks/use-toast"
 import {
   FileText,
@@ -55,127 +55,72 @@ export default function Applications() {
     fetchApplications()
   }, [profile])
 
-  const fetchApplications = async () => {
+  const fetchApplications = () => {
     if (!profile) return
 
-    try {
-      setLoading(true)
-
-      let query
+    setLoading(true)
+    setTimeout(() => {
+      let apps = []
+      
       if (profile.role === "student") {
-        query = supabase.from("applications").select("*").eq("student_id", profile.user_id)
-      } else if (profile.role === "faculty_mentor") {
-        setApplications([])
-        setLoading(false)
-        return
+        apps = dummyDataStore.getApplicationsForStudent(profile.user_id)
       } else {
-        query = supabase.from("applications").select("*")
+        apps = [...dummyDataStore.applications]
       }
 
-      const { data, error } = await query.order("applied_at", { ascending: false })
-      if (error) throw error
+      const applicationsWithData = apps.map((app) => {
+        const opportunity = dummyDataStore.opportunities.find(o => o.id === app.opportunity_id)
+        const studentProfile = dummyDataStore.getUserProfile(app.student_id)
+        const interviews = dummyDataStore.getInterviewsForApplication(app.id)
+        
+        // Get next upcoming interview
+        let nextInterview = null
+        if (interviews.length > 0) {
+          const now = new Date()
+          nextInterview = interviews.find((i) => {
+            const dt = new Date(i.scheduled_at)
+            return dt >= now
+          }) || interviews[interviews.length - 1]
+        }
 
-      const applicationsWithData = await Promise.all(
-        (data || []).map(async (app) => {
-          const [opportunityData, profileData, interviewData] = await Promise.all([
-            supabase
-              .from("opportunities")
-              .select("title, company_name, type, location, deadline, interview_rounds")
-              .eq("id", app.opportunity_id)
-              .single(),
-            profile.role !== "student"
-              ? supabase.from("profiles").select("full_name, email, department").eq("user_id", app.student_id).single()
-              : Promise.resolve({ data: null }),
-            supabase
-              .from("interviews")
-              .select("*")
-              .eq("application_id", app.id)
-              .order("scheduled_date", { ascending: true })
-              .order("scheduled_time", { ascending: true }),
-          ])
-
-          // pick next upcoming interview, fallback to latest if all are in the past
-          let nextInterview = null as any
-          if (Array.isArray(interviewData.data) && interviewData.data.length > 0) {
-            const now = new Date()
-            nextInterview =
-              interviewData.data.find((i) => {
-                const dt = new Date(`${i.scheduled_date}T${i.scheduled_time}`)
-                return dt >= now
-              }) || interviewData.data[interviewData.data.length - 1]
-          }
-
-          return {
-            ...app,
-            opportunities: opportunityData.data,
-            profiles: profileData.data,
-            nextInterview,
-          }
-        }),
-      )
+        return {
+          ...app,
+          opportunities: opportunity,
+          profiles: studentProfile,
+          nextInterview,
+        }
+      })
 
       setApplications(applicationsWithData)
-    } catch (error: any) {
-      toast({
-        title: "Error loading applications",
-        description: error.message,
-        variant: "destructive",
-      })
-    } finally {
       setLoading(false)
-    }
+    }, 300)
   }
 
-  const updateApplicationStatus = async (applicationId: string, newStatus: string) => {
-    try {
-      const updates: any = { status: newStatus, updated_at: new Date().toISOString() }
+  const updateApplicationStatus = (applicationId: string, newStatus: string) => {
+    const updated = dummyDataStore.updateApplication(applicationId, {
+      status: newStatus as any,
+    })
 
-      if (newStatus === "shortlisted") {
-        updates.shortlisted_at = new Date().toISOString()
-        updates.shortlisted_by = profile.user_id
-      }
-
-      const { error } = await supabase.from("applications").update(updates).eq("id", applicationId)
-
-      if (error) throw error
-
+    if (updated) {
       toast({
         title: "Status updated",
         description: `Application status updated to ${newStatus.replace("_", " ")}`,
       })
-
       fetchApplications()
-    } catch (error: any) {
-      toast({
-        title: "Error updating status",
-        description: error.message,
-        variant: "destructive",
-      })
     }
   }
 
-  const handleMentorApproval = async (approve: boolean) => {
+  const handleMentorApproval = (approve: boolean) => {
     if (!selectedApplication) return
 
-    try {
-      const updates: any = {
-        mentor_comments: mentorFeedback || null,
-        updated_at: new Date().toISOString(),
-      }
+    const updated = dummyDataStore.updateApplication(selectedApplication.id, {
+      mentor_approved: approve,
+      mentor_approved_at: approve ? new Date().toISOString() : undefined,
+      mentor_comments: mentorFeedback || "",
+      status: approve ? "under_review" : "rejected",
+    })
 
-      if (approve) {
-        updates.status = "mentor_approved"
-        updates.mentor_approved_at = new Date().toISOString()
-        updates.mentor_id = profile.user_id
-      } else {
-        updates.status = "mentor_rejected"
-        updates.mentor_id = profile.user_id
-      }
-
-      const { error } = await supabase.from("applications").update(updates).eq("id", selectedApplication.id)
-
-      if (error) throw error
-
+    if (updated) {
       toast({
         title: approve ? "Application approved" : "Application rejected",
         description: approve
@@ -187,38 +132,32 @@ export default function Applications() {
       setMentorFeedback("")
       setSelectedApplication(null)
       fetchApplications()
-    } catch (error: any) {
-      toast({
-        title: "Error processing approval",
-        description: error.message,
-        variant: "destructive",
-      })
     }
   }
 
-  const handleInternshipCompletion = async () => {
+  const handleInternshipCompletion = () => {
     if (!selectedApplication) return
 
     try {
-      await updateApplicationStatus(selectedApplication.id, "completed")
+      updateApplicationStatus(selectedApplication.id, "internship_completed")
 
-      const certificateData = {
+      // Generate certificate
+      const companyId = dummyDataStore.companies.find(c => 
+        c.name === selectedApplication.opportunities?.company_name
+      )?.id
+
+      dummyDataStore.addCertificate({
         student_id: selectedApplication.student_id,
-        student_name: selectedApplication.profiles?.full_name,
-        company_name: selectedApplication.opportunities?.company_name,
-        position: selectedApplication.opportunities?.title,
-        start_date: selectedApplication.applied_at,
-        end_date: new Date().toISOString(),
-        performance_rating: completionForm.performance_rating,
-        feedback: completionForm.overall_feedback,
-        technical_skills: completionForm.technical_skills,
-        soft_skills: completionForm.soft_skills,
-        strengths: completionForm.strengths,
-        areas_for_improvement: completionForm.areas_for_improvement,
-        recommend_for_placement: completionForm.recommend_for_placement === "yes",
+        application_id: selectedApplication.id,
+        company_id: companyId,
+        certificate_type: "internship",
+        title: `${selectedApplication.opportunities?.title} Internship Completion`,
+        description: `Successfully completed internship at ${selectedApplication.opportunities?.company_name}`,
+        issue_date: new Date().toISOString().split('T')[0],
         certificate_url: `/certificates/cert-${selectedApplication.id}.pdf`,
         verification_id: `CERT-2024-${selectedApplication.id.substring(0, 8).toUpperCase()}`,
-      }
+        status: "generated",
+      })
 
       toast({
         title: "Internship completed successfully",

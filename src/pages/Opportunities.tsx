@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
+import { dummyDataStore } from "@/lib/dummyData";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Building2, 
@@ -39,43 +39,27 @@ export default function Opportunities() {
     fetchOpportunities();
   }, []);
 
-  const fetchOpportunities = async () => {
-    try {
-      setLoading(true);
-        const { data, error } = await supabase
-          .from("opportunities")
-          .select("*")
-        .eq("is_active", true)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
+  const fetchOpportunities = () => {
+    setLoading(true);
+    setTimeout(() => {
+      const opps = dummyDataStore.opportunities.filter(o => o.is_active);
       
-      // Get application counts for each opportunity
-      const opportunitiesWithCounts = await Promise.all((data || []).map(async (opp) => {
-        const { data: appData } = await supabase
-          .from("applications")
-          .select("id, student_id, status")
-          .eq("opportunity_id", opp.id);
-        
+      // Add application counts
+      const opportunitiesWithCounts = opps.map(opp => {
+        const apps = dummyDataStore.getApplicationsForOpportunity(opp.id);
         return {
           ...opp,
-          applications: appData || []
+          applications: apps,
+          application_count: apps.length
         };
-      }));
+      });
       
       setOpportunities(opportunitiesWithCounts);
-    } catch (error: any) {
-      toast({
-        title: "Error loading opportunities",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
       setLoading(false);
-    }
+    }, 300);
   };
 
-  const handleApply = async (opportunityId: string) => {
+  const handleApply = (opportunityId: string) => {
     if (profile?.role !== "student") {
       toast({
         title: "Access denied",
@@ -85,36 +69,38 @@ export default function Opportunities() {
       return;
     }
 
-    try {
-      const { error } = await supabase
-        .from("applications")
-        .insert({
-          student_id: profile.user_id,
-          opportunity_id: opportunityId,
-          status: "pending",
-        });
+    // Check if already applied
+    const existingApp = dummyDataStore.applications.find(
+      app => app.student_id === profile.user_id && app.opportunity_id === opportunityId
+    );
 
-      if (error) {
-        if (error.code === "23505") {
-          toast({
-            title: "Already applied",
-            description: "You have already applied to this opportunity",
-            variant: "destructive",
-          });
-        } else {
-          throw error;
-        }
-      } else {
-        toast({
-          title: "Application submitted!",
-          description: "Your application has been submitted successfully",
-        });
-        fetchOpportunities(); // Refresh to update application status
-      }
+    if (existingApp) {
+      toast({
+        title: "Already applied",
+        description: "You have already applied to this opportunity",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      dummyDataStore.addApplication({
+        student_id: profile.user_id,
+        opportunity_id: opportunityId,
+        status: "pending",
+        mentor_approved: false,
+        resume_url: profile.resume_url || `/resumes/${profile.full_name.replace(' ', '-').toLowerCase()}.pdf`,
+      });
+
+      toast({
+        title: "Application submitted!",
+        description: "Your application has been submitted successfully and is pending mentor review.",
+      });
+      fetchOpportunities(); // Refresh to update application status
     } catch (error: any) {
       toast({
         title: "Application failed",
-        description: error.message,
+        description: error.message || "Failed to submit application",
         variant: "destructive",
       });
     }
