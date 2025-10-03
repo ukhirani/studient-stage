@@ -45,6 +45,7 @@ const menuItems = {
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     { title: "Opportunities", url: "/opportunities", icon: Briefcase },
     { title: "My Applications", url: "/applications", icon: FileText },
+    { title: "Schedule", url: "/schedule", icon: Calendar },
     { title: "Profile", url: "/profile", icon: User },
     { title: "Certificates", url: "/certificates", icon: Award },
   ],
@@ -60,17 +61,17 @@ const menuItems = {
   faculty_mentor: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     { title: "My Students", url: "/students", icon: Users },
-    { title: "Applications", url: "/applications", icon: FileText },
-    { title: "Approvals", url: "/approvals", icon: UserCheck },
     { title: "Feedback", url: "/feedback", icon: MessageSquare },
+    { title: "Schedule", url: "/schedule", icon: Calendar },
     { title: "Profile", url: "/profile", icon: User },
   ],
   recruiter: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    { title: "My Opportunities", url: "/my-opportunities", icon: Building },
     { title: "Post Opportunity", url: "/opportunities/new", icon: Briefcase },
-    { title: "My Opportunities", url: "/opportunities", icon: Building },
     { title: "Applications", url: "/applications", icon: FileText },
     { title: "Schedule", url: "/schedule", icon: Calendar },
+    { title: "Feedback", url: "/feedback", icon: MessageSquare },
     { title: "Profile", url: "/profile", icon: User },
   ],
 }

@@ -21,6 +21,8 @@ import Students from "@/pages/Students"
 import Feedback from "@/pages/Feedback"
 import VerifyRecruiters from "@/pages/VerifyRecruiters"
 import Schedule from "@/pages/Schedule"
+import MyOpportunities from "@/pages/MyOpportunities"
+import MyStudents from "@/pages/MyStudents"
 
 const queryClient = new QueryClient()
 
@@ -38,6 +40,7 @@ const App = () => (
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="opportunities" element={<Opportunities />} />
               <Route path="opportunities/new" element={<CreateOpportunity />} />
+              <Route path="my-opportunities" element={<MyOpportunities />} />
               <Route path="applications" element={<Applications />} />
               <Route path="profile" element={<Profile />} />
               <Route path="settings" element={<Settings />} />
@@ -45,6 +48,7 @@ const App = () => (
               <Route path="companies" element={<CompanyManagement />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="students" element={<Students />} />
+              <Route path="my-students" element={<MyStudents />} />
               <Route path="feedback" element={<Feedback />} />
               <Route path="verify-recruiters" element={<VerifyRecruiters />} />
               <Route path="analytics" element={<div className="p-6">Analytics Page - Coming Soon</div>} />
