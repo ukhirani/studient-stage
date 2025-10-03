@@ -151,11 +151,23 @@ export default function Settings() {
 
       <Tabs defaultValue="account" className="space-y-6 animate-slide-up" style={{ animationDelay: "0.1s" }}>
         <TabsList className="grid w-full grid-cols-5 lg:w-auto transition-all duration-300">
-          <TabsTrigger value="account" className="transition-all duration-200 data-[state=active]:shadow-md">Account</TabsTrigger>
-          <TabsTrigger value="preferences" className="transition-all duration-200 data-[state=active]:shadow-md">Preferences</TabsTrigger>
-          <TabsTrigger value="notifications" className="transition-all duration-200 data-[state=active]:shadow-md">Notifications</TabsTrigger>
-          <TabsTrigger value="privacy" className="transition-all duration-200 data-[state=active]:shadow-md">Privacy</TabsTrigger>
-          <TabsTrigger value="support" className="transition-all duration-200 data-[state=active]:shadow-md">Support</TabsTrigger>
+          <TabsTrigger value="account" className="transition-all duration-200 data-[state=active]:shadow-md">
+            Account
+          </TabsTrigger>
+          {profile?.role !== "faculty_mentor" && (
+            <TabsTrigger value="preferences" className="transition-all duration-200 data-[state=active]:shadow-md">
+              Preferences
+            </TabsTrigger>
+          )}
+          <TabsTrigger value="notifications" className="transition-all duration-200 data-[state=active]:shadow-md">
+            Notifications
+          </TabsTrigger>
+          <TabsTrigger value="privacy" className="transition-all duration-200 data-[state=active]:shadow-md">
+            Privacy
+          </TabsTrigger>
+          <TabsTrigger value="support" className="transition-all duration-200 data-[state=active]:shadow-md">
+            Support
+          </TabsTrigger>
         </TabsList>
 
         {/* Account Information Tab */}
@@ -181,7 +193,11 @@ export default function Settings() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="space-y-2">
-                  <Button variant="outline" size="sm" className="hover:scale-105 transition-all duration-200">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="hover:scale-105 transition-all duration-200 bg-transparent"
+                  >
                     <Upload className="h-4 w-4 mr-2" />
                     Change Picture
                   </Button>
@@ -264,121 +280,123 @@ export default function Settings() {
         </TabsContent>
 
         {/* Academic & Placement Preferences Tab */}
-        <TabsContent value="preferences" className="space-y-6">
-          <Card className="bg-gradient-card border-border/50">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Briefcase className="h-5 w-5 text-primary" />
-                <span>Academic & Placement Preferences</span>
-              </CardTitle>
-              <CardDescription>Set your job preferences and career goals</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Resume Upload */}
-              <div className="space-y-2">
-                <Label>Default Resume / Cover Letter</Label>
-                <div className="flex items-center space-x-2">
-                  <Input type="file" accept=".pdf,.doc,.docx" className="flex-1" />
-                  <Button variant="outline">
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload
+        {profile?.role !== "faculty_mentor" && (
+          <TabsContent value="preferences" className="space-y-6">
+            <Card className="bg-gradient-card border-border/50">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Briefcase className="h-5 w-5 text-primary" />
+                  <span>Academic & Placement Preferences</span>
+                </CardTitle>
+                <CardDescription>Set your job preferences and career goals</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Resume Upload */}
+                <div className="space-y-2">
+                  <Label>Default Resume / Cover Letter</Label>
+                  <div className="flex items-center space-x-2">
+                    <Input type="file" accept=".pdf,.doc,.docx" className="flex-1" />
+                    <Button variant="outline">
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">This resume will be used for quick applications</p>
+                </div>
+
+                <Separator />
+
+                {/* Skills Visibility */}
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <Label htmlFor="skills-visibility">Skills & Badge Visibility</Label>
+                    <p className="text-sm text-muted-foreground">Make your skills visible to recruiters</p>
+                  </div>
+                  <Switch id="skills-visibility" checked={skillsVisible} onCheckedChange={setSkillsVisible} />
+                </div>
+
+                <Separator />
+
+                {/* Preferred Domains */}
+                <div className="space-y-2">
+                  <Label>Preferred Job/Internship Domains</Label>
+                  <Select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select domains" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="software">Software Development</SelectItem>
+                      <SelectItem value="data">Data Science</SelectItem>
+                      <SelectItem value="ml">Machine Learning</SelectItem>
+                      <SelectItem value="web">Web Development</SelectItem>
+                      <SelectItem value="mobile">Mobile Development</SelectItem>
+                      <SelectItem value="devops">DevOps</SelectItem>
+                      <SelectItem value="design">UI/UX Design</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {preferredDomains.map((domain, index) => (
+                      <span key={index} className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
+                        {domain}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Preferred Locations */}
+                <div className="space-y-2">
+                  <Label>Preferred Locations</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="onsite" />
+                      <label htmlFor="onsite" className="text-sm">
+                        On-site
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="remote" defaultChecked />
+                      <label htmlFor="remote" className="text-sm">
+                        Remote
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="hybrid" defaultChecked />
+                      <label htmlFor="hybrid" className="text-sm">
+                        Hybrid
+                      </label>
+                    </div>
+                  </div>
+                  <Input placeholder="Preferred cities (e.g., Bangalore, Mumbai)" className="mt-2" />
+                </div>
+
+                {/* Stipend Expectations */}
+                <div className="space-y-2">
+                  <Label htmlFor="stipend">Stipend Expectations (₹/month)</Label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="stipend"
+                      type="number"
+                      value={stipendExpectation}
+                      onChange={(e) => setStipendExpectation(e.target.value)}
+                      placeholder="30000"
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button
+                    onClick={handleSavePreferences}
+                    className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
+                  >
+                    Save Preferences
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">This resume will be used for quick applications</p>
-              </div>
-
-              <Separator />
-
-              {/* Skills Visibility */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <Label htmlFor="skills-visibility">Skills & Badge Visibility</Label>
-                  <p className="text-sm text-muted-foreground">Make your skills visible to recruiters</p>
-                </div>
-                <Switch id="skills-visibility" checked={skillsVisible} onCheckedChange={setSkillsVisible} />
-              </div>
-
-              <Separator />
-
-              {/* Preferred Domains */}
-              <div className="space-y-2">
-                <Label>Preferred Job/Internship Domains</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select domains" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="software">Software Development</SelectItem>
-                    <SelectItem value="data">Data Science</SelectItem>
-                    <SelectItem value="ml">Machine Learning</SelectItem>
-                    <SelectItem value="web">Web Development</SelectItem>
-                    <SelectItem value="mobile">Mobile Development</SelectItem>
-                    <SelectItem value="devops">DevOps</SelectItem>
-                    <SelectItem value="design">UI/UX Design</SelectItem>
-                  </SelectContent>
-                </Select>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {preferredDomains.map((domain, index) => (
-                    <span key={index} className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
-                      {domain}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Preferred Locations */}
-              <div className="space-y-2">
-                <Label>Preferred Locations</Label>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="onsite" />
-                    <label htmlFor="onsite" className="text-sm">
-                      On-site
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="remote" defaultChecked />
-                    <label htmlFor="remote" className="text-sm">
-                      Remote
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="hybrid" defaultChecked />
-                    <label htmlFor="hybrid" className="text-sm">
-                      Hybrid
-                    </label>
-                  </div>
-                </div>
-                <Input placeholder="Preferred cities (e.g., Bangalore, Mumbai)" className="mt-2" />
-              </div>
-
-              {/* Stipend Expectations */}
-              <div className="space-y-2">
-                <Label htmlFor="stipend">Stipend Expectations (₹/month)</Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="stipend"
-                    type="number"
-                    value={stipendExpectation}
-                    onChange={(e) => setStipendExpectation(e.target.value)}
-                    placeholder="30000"
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end">
-                <Button
-                  onClick={handleSavePreferences}
-                  className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
-                >
-                  Save Preferences
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         {/* Notifications & Alerts Tab */}
         <TabsContent value="notifications" className="space-y-6">

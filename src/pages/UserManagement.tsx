@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useOutletContext } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Shield, Search, UserCheck, UserX, Mail, Phone, GraduationCap, Users, Building } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { supabase } from "@/integrations/supabase/client" // add supabase
 
 interface User {
   id: string
@@ -42,58 +43,54 @@ export default function UserManagement() {
   const [roleFilter, setRoleFilter] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
 
-  // Mock data - replace with actual API calls
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: "1",
-      name: "John Doe",
-      email: "john.doe@university.edu",
-      phone: "+91 98765 43210",
-      role: "student",
-      status: "active",
-      joinedDate: "2024-01-15",
-      department: "Computer Science",
-    },
-    {
-      id: "2",
-      name: "Jane Smith",
-      email: "jane.smith@university.edu",
-      phone: "+91 98765 43211",
-      role: "faculty_mentor",
-      status: "active",
-      joinedDate: "2023-08-20",
-      department: "Electronics",
-    },
-    {
-      id: "3",
-      name: "Mike Johnson",
-      email: "mike@techcorp.com",
-      phone: "+91 98765 43212",
-      role: "recruiter",
-      status: "active",
-      joinedDate: "2024-02-10",
-    },
-    {
-      id: "4",
-      name: "Sarah Williams",
-      email: "sarah.williams@university.edu",
-      phone: "+91 98765 43213",
-      role: "student",
-      status: "inactive",
-      joinedDate: "2023-12-05",
-      department: "Mechanical",
-    },
-  ])
+  const [users, setUsers] = useState<User[]>([])
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        // fetch all profiles
+        const { data: profiles, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .order("created_at", { ascending: false })
+        if (error) throw error
+
+        // get departments for students
+        const studentIds = (profiles || []).filter((p: any) => p.role === "student").map((p: any) => p.user_id)
+        let studentProfilesMap: Record<string, any> = {}
+        if (studentIds.length) {
+          const { data: sps } = await supabase
+            .from("student_profiles")
+            .select("user_id, department")
+            .in("user_id", studentIds)
+          studentProfilesMap = Object.fromEntries((sps || []).map((s: any) => [s.user_id, s]))
+        }
+
+        const mapped: User[] = (profiles || []).map((p: any) => ({
+          id: p.user_id,
+          name: p.full_name,
+          email: p.email,
+          phone: p.phone || "",
+          role: p.role,
+          status: "active",
+          joinedDate: (p.created_at || "").split("T")[0] || "",
+          department: studentProfilesMap[p.user_id]?.department || undefined,
+        }))
+
+        setUsers(mapped)
+      } catch (err: any) {
+        toast({ title: "Error loading users", description: err.message, variant: "destructive" })
+      }
+    }
+    fetchUsers()
+  }, [toast])
 
   const handleToggleStatus = (userId: string) => {
     setUsers(
       users.map((user) => {
         if (user.id === userId) {
           const newStatus = user.status === "active" ? "suspended" : "active"
-          toast({
-            title: `User ${newStatus}`,
-            description: `${user.name} has been ${newStatus}`,
-          })
+          toast({ title: `User ${newStatus}`, description: `${user.name} has been ${newStatus}` })
           return { ...user, status: newStatus }
         }
         return user
@@ -221,7 +218,11 @@ export default function UserManagement() {
             const roleColorClass = roleColors[user.role]
 
             return (
-              <Card key={user.id} className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-[1.01] transition-all duration-300 animate-fade-in" style={{ animationDelay: `${0.2 + idx * 0.05}s` }}>
+              <Card
+                key={user.id}
+                className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-[1.01] transition-all duration-300 animate-fade-in"
+                style={{ animationDelay: `${0.2 + idx * 0.05}s` }}
+              >
                 <CardContent className="p-6">
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div className="flex items-start space-x-4 flex-1">

@@ -6,17 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -47,8 +37,8 @@ export default function Applications() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [selectedApplication, setSelectedApplication] = useState<any>(null)
   const [showCompletionDialog, setShowCompletionDialog] = useState(false)
-  const [showMentorDialog, setShowMentorDialog] = useState(false)
   const [mentorFeedback, setMentorFeedback] = useState("")
+  const [showMentorDialog, setShowMentorDialog] = useState(false) // Declared the missing variable
   const { toast } = useToast()
 
   const [completionForm, setCompletionForm] = useState({
@@ -75,49 +65,43 @@ export default function Applications() {
       if (profile.role === "student") {
         query = supabase.from("applications").select("*").eq("student_id", profile.user_id)
       } else if (profile.role === "faculty_mentor") {
-        // First get assigned student IDs
-        const { data: assignments } = await supabase
-          .from("mentor_student_assignments")
-          .select("student_id")
-          .eq("mentor_id", profile.user_id)
-          .eq("is_active", true)
-
-        const studentIds = assignments?.map((a) => a.student_id) || []
-
-        if (studentIds.length === 0) {
-          setApplications([])
-          setLoading(false)
-          return
-        }
-
-        query = supabase.from("applications").select("*").in("student_id", studentIds)
+        setApplications([])
+        setLoading(false)
+        return
       } else {
-        // Placement officers and recruiters see all applications
         query = supabase.from("applications").select("*")
       }
 
       const { data, error } = await query.order("applied_at", { ascending: false })
-
       if (error) throw error
 
-      // Fetch related data separately to avoid relationship issues
       const applicationsWithData = await Promise.all(
         (data || []).map(async (app) => {
-          const [opportunityData, profileData] = await Promise.all([
+          const [opportunityData, profileData, interviewData] = await Promise.all([
             supabase
               .from("opportunities")
-              .select("title, company_name, type, location, deadline")
+              .select("title, company_name, type, location, deadline, interview_rounds")
               .eq("id", app.opportunity_id)
               .single(),
             profile.role !== "student"
               ? supabase.from("profiles").select("full_name, email, department").eq("user_id", app.student_id).single()
               : Promise.resolve({ data: null }),
+            supabase
+              .from("interviews")
+              .select("*")
+              .eq("application_id", app.id)
+              .order("scheduled_date", { ascending: true })
+              .order("scheduled_time", { ascending: true })
+              .limit(1),
           ])
+
+          const nextInterview = Array.isArray(interviewData.data) ? interviewData.data[0] : null
 
           return {
             ...app,
             opportunities: opportunityData.data,
             profiles: profileData.data,
+            nextInterview,
           }
         }),
       )
@@ -208,10 +192,8 @@ export default function Applications() {
     if (!selectedApplication) return
 
     try {
-      // Update application status to completed
       await updateApplicationStatus(selectedApplication.id, "completed")
 
-      // Mock certificate generation - in production, this would generate a PDF
       const certificateData = {
         student_id: selectedApplication.student_id,
         student_name: selectedApplication.profiles?.full_name,
@@ -226,7 +208,7 @@ export default function Applications() {
         strengths: completionForm.strengths,
         areas_for_improvement: completionForm.areas_for_improvement,
         recommend_for_placement: completionForm.recommend_for_placement === "yes",
-        certificate_url: `/certificates/cert-${selectedApplication.id}.pdf`, // Mock URL
+        certificate_url: `/certificates/cert-${selectedApplication.id}.pdf`,
         verification_id: `CERT-2024-${selectedApplication.id.substring(0, 8).toUpperCase()}`,
       }
 
@@ -335,21 +317,32 @@ export default function Applications() {
     )
   }
 
+  if (profile?.role === "faculty_mentor") {
+    return (
+      <div className="p-6">
+        <Card className="bg-gradient-card border-border/50">
+          <CardContent className="py-12 text-center">
+            <h3 className="text-lg font-semibold text-foreground mb-2">Applications not available</h3>
+            <p className="text-muted-foreground">Faculty Mentors should manage students via the My Students section.</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-foreground">Applications</h1>
         <p className="text-muted-foreground">
           {profile?.role === "student"
             ? "Track your application status and progress"
-            : profile?.role === "faculty_mentor"
-              ? "Review and approve student applications before forwarding to recruiters"
-              : "Manage student applications and provide guidance"}
+            : profile?.role === "placement_officer" || profile?.role === "recruiter"
+              ? "Manage student applications and provide guidance"
+              : ""}
         </p>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         {Object.entries(applicationsByStatus).map(([status, count], index) => (
           <Card
@@ -366,7 +359,6 @@ export default function Applications() {
         ))}
       </div>
 
-      {/* Filters */}
       <Card
         className="bg-gradient-card border-border/50 hover:shadow-md transition-all duration-300 animate-fade-in"
         style={{ animationDelay: "0.5s" }}
@@ -414,292 +406,256 @@ export default function Applications() {
         </CardContent>
       </Card>
 
-      {/* Applications List */}
       <div className="space-y-4">
-        {filteredApplications.map((application, index) => (
-          <Card
-            key={application.id}
-            className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 animate-fade-in"
-            style={{ animationDelay: `${0.6 + index * 0.05}s` }}
-          >
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="space-y-2">
-                  <CardTitle className="text-xl text-foreground">{application.opportunities?.title}</CardTitle>
-                  <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                    <div className="flex items-center space-x-1">
-                      <Building2 className="h-4 w-4" />
-                      <span>{application.opportunities?.company_name}</span>
-                    </div>
-                    {profile?.role !== "student" && (
+        {filteredApplications.map((application, index) => {
+          const ir = application.opportunities?.interview_rounds
+          const roundNames = Array.isArray(ir?.rounds) ? ir.rounds : Array.isArray(ir) ? ir : []
+          const currentRound = application.current_round ?? 0
+
+          return (
+            <Card
+              key={application.id}
+              className="bg-gradient-card border-border/50 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 animate-fade-in"
+              style={{ animationDelay: `${0.6 + index * 0.05}s` }}
+            >
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="space-y-2">
+                    <CardTitle className="text-xl text-foreground">{application.opportunities?.title}</CardTitle>
+                    <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                       <div className="flex items-center space-x-1">
-                        <User className="h-4 w-4" />
-                        <span>{application.profiles?.full_name}</span>
+                        <Building2 className="h-4 w-4" />
+                        <span>{application.opportunities?.company_name}</span>
+                      </div>
+                      {profile?.role !== "student" && (
+                        <div className="flex items-center space-x-1">
+                          <User className="h-4 w-4" />
+                          <span>{application.profiles?.full_name}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center space-x-1">
+                        <Calendar className="h-4 w-4" />
+                        <span>Applied: {new Date(application.applied_at).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end space-y-2">
+                    <Badge variant={getStatusVariant(application.status)} className="capitalize">
+                      {getStatusIcon(application.status)}
+                      <span className="ml-1">{application.status.replace("_", " ")}</span>
+                    </Badge>
+                    {application.mentor_approved && (
+                      <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+                        <UserCheck className="h-3 w-3 mr-1" />
+                        Mentor Approved
+                      </Badge>
+                    )}
+                    <Badge variant="outline" className="capitalize">
+                      {application.opportunities?.type}
+                    </Badge>
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-4">
+                {roundNames.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-3">
+                    {roundNames.map((name: string, idx: number) => {
+                      const step = idx + 1
+                      const done = currentRound > idx
+                      const active = currentRound === idx
+                      return (
+                        <div
+                          key={idx}
+                          className={`px-3 py-1 rounded border text-sm ${
+                            done
+                              ? "bg-green-100 text-green-800 border-green-200"
+                              : active
+                                ? "bg-blue-100 text-blue-800 border-blue-200"
+                                : "bg-muted/30 text-muted-foreground border-border/50"
+                          }`}
+                        >
+                          Round {step}: {name}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {(application.status === "shortlisted" || application.status === "interview_scheduled") &&
+                  application.nextInterview && (
+                    <div className="bg-muted/50 p-3 rounded-lg border border-border/50">
+                      <p className="text-sm font-medium text-foreground mb-1">Next Interview</p>
+                      <div className="text-sm text-muted-foreground">
+                        <div>Date: {new Date(application.nextInterview.scheduled_date).toLocaleDateString()}</div>
+                        <div>Time: {application.nextInterview.scheduled_time}</div>
+                        {application.nextInterview.mode && <div>Mode: {application.nextInterview.mode}</div>}
+                        {application.nextInterview.meeting_link && (
+                          <div>
+                            Link:{" "}
+                            <a
+                              href={application.nextInterview.meeting_link}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-primary underline"
+                            >
+                              {application.nextInterview.meeting_link}
+                            </a>
+                          </div>
+                        )}
+                        {application.nextInterview.location && (
+                          <div>Location: {application.nextInterview.location}</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                <div className="flex items-center space-x-4 text-sm">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-primary rounded-full"></div>
+                    <span>Applied</span>
+                  </div>
+                  {application.mentor_approved && (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-primary rounded-full"></div>
+                      <span>Mentor Approved</span>
+                    </div>
+                  )}
+                  {application.shortlisted_at && (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-primary rounded-full"></div>
+                      <span>Shortlisted</span>
+                    </div>
+                  )}
+                  {application.interview_scheduled_at && (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-primary rounded-full"></div>
+                      <span>Interview Scheduled</span>
+                    </div>
+                  )}
+                  {application.offer_extended_at && (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-primary rounded-full"></div>
+                      <span>Offer Extended</span>
+                    </div>
+                  )}
+                  {application.completed_at && (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-primary rounded-full"></div>
+                      <span>Completed</span>
+                    </div>
+                  )}
+                </div>
+
+                {application.mentor_comments && (
+                  <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
+                    <p className="text-sm font-medium text-blue-900 mb-1 flex items-center">
+                      <MessageSquare className="h-4 w-4 mr-1" />
+                      Mentor Feedback:
+                    </p>
+                    <p className="text-sm text-blue-800">{application.mentor_comments}</p>
+                    {application.mentor_approved_at && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        Reviewed on {new Date(application.mentor_approved_at).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {application.notes && (
+                  <div className="bg-muted/50 p-3 rounded-lg">
+                    <p className="text-sm text-muted-foreground">
+                      <strong>Notes:</strong> {application.notes}
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between pt-4 border-t border-border/50">
+                  <div className="flex items-center space-x-2">
+                    {application.opportunities?.location && (
+                      <span className="text-sm text-muted-foreground">📍 {application.opportunities.location}</span>
+                    )}
+                  </div>
+
+                  {(profile?.role === "placement_officer" || profile?.role === "recruiter") &&
+                    application.mentor_approved && (
+                      <div className="flex space-x-2">
+                        {application.status === "pending" && (
+                          <>
+                            <Button
+                              size="sm"
+                              onClick={() => updateApplicationStatus(application.id, "shortlisted")}
+                              className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
+                            >
+                              Shortlist Candidate
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => updateApplicationStatus(application.id, "rejected")}
+                            >
+                              Reject
+                            </Button>
+                          </>
+                        )}
+                        {application.status === "shortlisted" && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                window.location.href = `/schedule?application_id=${application.id}`
+                              }}
+                            >
+                              Propose Interview Slots
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => updateApplicationStatus(application.id, "rejected")}
+                            >
+                              Reject
+                            </Button>
+                          </>
+                        )}
+                        {application.status === "interview_scheduled" && (
+                          <>
+                            <Button
+                              size="sm"
+                              onClick={() => updateApplicationStatus(application.id, "offer_extended")}
+                              className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
+                            >
+                              Extend Offer
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => updateApplicationStatus(application.id, "rejected")}
+                            >
+                              Reject
+                            </Button>
+                          </>
+                        )}
+                        {application.status === "offer_extended" && (
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setSelectedApplication(application)
+                              setShowCompletionDialog(true)
+                            }}
+                            className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
+                          >
+                            <Award className="h-4 w-4 mr-1" />
+                            Complete Internship
+                          </Button>
+                        )}
                       </div>
                     )}
-                    <div className="flex items-center space-x-1">
-                      <Calendar className="h-4 w-4" />
-                      <span>Applied: {new Date(application.applied_at).toLocaleDateString()}</span>
-                    </div>
-                  </div>
                 </div>
-                <div className="flex flex-col items-end space-y-2">
-                  <Badge variant={getStatusVariant(application.status)} className="capitalize">
-                    {getStatusIcon(application.status)}
-                    <span className="ml-1">{application.status.replace("_", " ")}</span>
-                  </Badge>
-                  {application.mentor_approved && (
-                    <Badge className="bg-blue-100 text-blue-800 border-blue-200">
-                      <UserCheck className="h-3 w-3 mr-1" />
-                      Mentor Approved
-                    </Badge>
-                  )}
-                  <Badge variant="outline" className="capitalize">
-                    {application.opportunities?.type}
-                  </Badge>
-                </div>
-              </div>
-            </CardHeader>
-
-            <CardContent className="space-y-4">
-              {/* Timeline */}
-              <div className="flex items-center space-x-4 text-sm">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-primary rounded-full"></div>
-                  <span>Applied</span>
-                </div>
-                {application.mentor_approved && (
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-primary rounded-full"></div>
-                    <span>Mentor Approved</span>
-                  </div>
-                )}
-                {application.shortlisted_at && (
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-primary rounded-full"></div>
-                    <span>Shortlisted</span>
-                  </div>
-                )}
-                {application.interview_scheduled_at && (
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-primary rounded-full"></div>
-                    <span>Interview Scheduled</span>
-                  </div>
-                )}
-                {application.offer_extended_at && (
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-primary rounded-full"></div>
-                    <span>Offer Extended</span>
-                  </div>
-                )}
-                {application.completed_at && (
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-primary rounded-full"></div>
-                    <span>Completed</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Mentor Feedback Display */}
-              {application.mentor_comments && (
-                <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
-                  <p className="text-sm font-medium text-blue-900 mb-1 flex items-center">
-                    <MessageSquare className="h-4 w-4 mr-1" />
-                    Mentor Feedback:
-                  </p>
-                  <p className="text-sm text-blue-800">{application.mentor_comments}</p>
-                  {application.mentor_approved_at && (
-                    <p className="text-xs text-blue-600 mt-1">
-                      Reviewed on {new Date(application.mentor_approved_at).toLocaleDateString()}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Notes */}
-              {application.notes && (
-                <div className="bg-muted/50 p-3 rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    <strong>Notes:</strong> {application.notes}
-                  </p>
-                </div>
-              )}
-
-              {/* Actions */}
-              <div className="flex items-center justify-between pt-4 border-t border-border/50">
-                <div className="flex items-center space-x-2">
-                  {application.opportunities?.location && (
-                    <span className="text-sm text-muted-foreground">📍 {application.opportunities.location}</span>
-                  )}
-                </div>
-
-                {profile?.role === "faculty_mentor" &&
-                  (application.status === "pending" || application.status === "mentor_pending") && (
-                    <Dialog
-                      open={showMentorDialog && selectedApplication?.id === application.id}
-                      onOpenChange={(open) => {
-                        setShowMentorDialog(open)
-                        if (open) setSelectedApplication(application)
-                        else {
-                          setSelectedApplication(null)
-                          setMentorFeedback("")
-                        }
-                      }}
-                    >
-                      <DialogTrigger asChild>
-                        <Button size="sm" className="bg-gradient-primary hover:shadow-glow transition-all duration-300">
-                          <UserCheck className="h-4 w-4 mr-1" />
-                          Review Application
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl">
-                        <DialogHeader>
-                          <DialogTitle>Review Student Application</DialogTitle>
-                          <DialogDescription>
-                            Review {application.profiles?.full_name}'s application for{" "}
-                            {application.opportunities?.title}
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                          <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                              <div>
-                                <span className="font-medium">Student:</span> {application.profiles?.full_name}
-                              </div>
-                              <div>
-                                <span className="font-medium">Department:</span> {application.profiles?.department}
-                              </div>
-                              <div>
-                                <span className="font-medium">Position:</span> {application.opportunities?.title}
-                              </div>
-                              <div>
-                                <span className="font-medium">Company:</span> {application.opportunities?.company_name}
-                              </div>
-                            </div>
-                            {application.cover_letter && (
-                              <div className="mt-3 pt-3 border-t border-border">
-                                <span className="font-medium text-sm">Cover Letter:</span>
-                                <p className="text-sm text-muted-foreground mt-1">{application.cover_letter}</p>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label>Feedback for Student (Optional)</Label>
-                            <Textarea
-                              placeholder="Provide guidance or feedback for the student..."
-                              value={mentorFeedback}
-                              onChange={(e) => setMentorFeedback(e.target.value)}
-                              rows={4}
-                            />
-                          </div>
-
-                          <div className="flex space-x-2">
-                            <Button
-                              onClick={() => handleMentorApproval(true)}
-                              className="flex-1 bg-green-600 hover:bg-green-700"
-                            >
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                              Approve & Forward to Recruiter
-                            </Button>
-                            <Button
-                              onClick={() => handleMentorApproval(false)}
-                              variant="destructive"
-                              className="flex-1"
-                            >
-                              <XCircle className="h-4 w-4 mr-2" />
-                              Reject Application
-                            </Button>
-                          </div>
-
-                          <p className="text-xs text-muted-foreground">
-                            Approved applications will be forwarded to the recruiter for consideration. Rejected
-                            applications will be marked as rejected and the student will be notified.
-                          </p>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  )}
-
-                {(profile?.role === "placement_officer" || profile?.role === "recruiter") &&
-                  application.mentor_approved && (
-                    <div className="flex space-x-2">
-                      {application.status === "pending" && (
-                        <>
-                          <Button
-                            size="sm"
-                            onClick={() => updateApplicationStatus(application.id, "shortlisted")}
-                            className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
-                          >
-                            Shortlist Candidate
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => updateApplicationStatus(application.id, "rejected")}
-                          >
-                            Reject
-                          </Button>
-                        </>
-                      )}
-                      {application.status === "shortlisted" && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              // Navigate to schedule page to create interview
-                              window.location.href = `/schedule?application_id=${application.id}`
-                            }}
-                          >
-                            Propose Interview Slots
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => updateApplicationStatus(application.id, "rejected")}
-                          >
-                            Reject
-                          </Button>
-                        </>
-                      )}
-                      {application.status === "interview_scheduled" && (
-                        <>
-                          <Button
-                            size="sm"
-                            onClick={() => updateApplicationStatus(application.id, "offer_extended")}
-                            className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
-                          >
-                            Extend Offer
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => updateApplicationStatus(application.id, "rejected")}
-                          >
-                            Reject
-                          </Button>
-                        </>
-                      )}
-                      {application.status === "offer_extended" && (
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            setSelectedApplication(application)
-                            setShowCompletionDialog(true)
-                          }}
-                          className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
-                        >
-                          <Award className="h-4 w-4 mr-1" />
-                          Complete Internship
-                        </Button>
-                      )}
-                    </div>
-                  )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
 
       {filteredApplications.length === 0 && (

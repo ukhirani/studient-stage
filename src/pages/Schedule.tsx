@@ -58,6 +58,7 @@ export default function Schedule() {
     location: "",
     meeting_link: "",
     notes: "",
+    round_number: "1",
   })
 
   useEffect(() => {
@@ -154,11 +155,14 @@ export default function Schedule() {
 
       if (error) throw error
 
-      // Fetch related data for each application
       const applicationsWithData = await Promise.all(
         (data || []).map(async (app) => {
           const [opportunityData, profileData] = await Promise.all([
-            supabase.from("opportunities").select("title, company_name").eq("id", app.opportunity_id).single(),
+            supabase
+              .from("opportunities")
+              .select("title, company_name, interview_rounds")
+              .eq("id", app.opportunity_id)
+              .single(),
             supabase.from("profiles").select("full_name, email").eq("user_id", app.student_id).single(),
           ])
 
@@ -205,31 +209,41 @@ export default function Schedule() {
         return
       }
 
-      // Create interview
+      const selectedApp = applications.find((a) => a.id === newInterview.application_id)
+      const ir = selectedApp?.opportunities?.interview_rounds
+      const rounds: string[] = Array.isArray(ir?.rounds) ? ir.rounds : Array.isArray(ir) ? ir : []
+      const roundIndex = Math.max(1, Number.parseInt(newInterview.round_number || "1")) - 1
+      const roundName = rounds[roundIndex] || `Round ${roundIndex + 1}`
+
+      // Create interview with round metadata
       const { data: interview, error: interviewError } = await supabase
         .from("interviews")
-        .insert([{
-          application_id: newInterview.application_id,
-          scheduled_date: newInterview.scheduled_date,
-          scheduled_time: newInterview.scheduled_time,
-          duration_minutes: Number.parseInt(newInterview.duration_minutes),
-          mode: newInterview.mode as "offline" | "online" | "phone",
-          location: newInterview.mode === "offline" ? newInterview.location : null,
-          meeting_link: newInterview.mode === "online" ? newInterview.meeting_link : null,
-          notes: newInterview.notes || null,
-          status: "scheduled",
-          created_by: profile.user_id,
-        }])
+        .insert([
+          {
+            application_id: newInterview.application_id,
+            scheduled_date: newInterview.scheduled_date,
+            scheduled_time: newInterview.scheduled_time,
+            duration_minutes: Number.parseInt(newInterview.duration_minutes),
+            mode: newInterview.mode as "offline" | "online" | "phone",
+            location: newInterview.mode === "offline" ? newInterview.location : null,
+            meeting_link: newInterview.mode === "online" ? newInterview.meeting_link : null,
+            round_number: roundIndex + 1,
+            round_name: roundName,
+            notes: newInterview.notes || null,
+            status: "scheduled",
+            created_by: profile.user_id,
+          },
+        ])
         .select()
         .single()
 
       if (interviewError) throw interviewError
 
-      // Update application status to interview_scheduled
       const { error: appError } = await supabase
         .from("applications")
         .update({
           status: "interview_scheduled",
+          current_round: roundIndex + 1,
           updated_at: new Date().toISOString(),
         })
         .eq("id", newInterview.application_id)
@@ -251,6 +265,7 @@ export default function Schedule() {
         location: "",
         meeting_link: "",
         notes: "",
+        round_number: "1",
       })
 
       fetchInterviews()
@@ -435,6 +450,28 @@ export default function Schedule() {
                           No shortlisted candidates available
                         </SelectItem>
                       )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Round *</Label>
+                  <Select
+                    value={newInterview.round_number}
+                    onValueChange={(value) => setNewInterview({ ...newInterview, round_number: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(() => {
+                        const sel = applications.find((a) => a.id === newInterview.application_id)
+                        const ir = sel?.opportunities?.interview_rounds
+                        const rounds: string[] = Array.isArray(ir?.rounds) ? ir.rounds : Array.isArray(ir) ? ir : []
+                        return (rounds.length ? rounds : ["Round 1"]).map((name, idx) => (
+                          <SelectItem key={idx} value={`${idx + 1}`}>{`${idx + 1}. ${name}`}</SelectItem>
+                        ))
+                      })()}
                     </SelectContent>
                   </Select>
                 </div>

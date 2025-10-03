@@ -31,6 +31,7 @@ import {
   Calendar,
   TrendingUp,
   CheckCircle,
+  Upload,
 } from "lucide-react"
 
 interface ContextType {
@@ -111,6 +112,7 @@ export default function Profile() {
   const [careerLog, setCareerLog] = useState<any[]>([])
   const [careerLogLoading, setCareerLogLoading] = useState(false)
   const { toast } = useToast()
+  const [resumeFile, setResumeFile] = useState<File | null>(null)
 
   const [formData, setFormData] = useState({
     full_name: "",
@@ -344,6 +346,47 @@ export default function Profile() {
   const certifications = careerLog.filter((item) => item.type === "training" && item.status === "completed").length
   const placementEligible = careerLog.some((item) => item.type === "internship" && item.placement_eligible)
 
+  const handleResumeFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[1] ? null : e.target.files?.[0] || null
+    setResumeFile(file || null)
+  }
+
+  const uploadResume = async () => {
+    if (!profile) return
+    if (!resumeFile) {
+      toast({ title: "No file selected", description: "Please choose a PDF to upload.", variant: "destructive" })
+      return
+    }
+    try {
+      const fileExt = resumeFile.name.split(".").pop()?.toLowerCase()
+      if (fileExt !== "pdf") {
+        toast({ title: "Invalid file", description: "Only PDF resumes are allowed.", variant: "destructive" })
+        return
+      }
+
+      const storagePath = `${profile.user_id}/${Date.now()}-${resumeFile.name}`
+      const { error: uploadError } = await supabase.storage.from("resumes").upload(storagePath, resumeFile, {
+        cacheControl: "3600",
+        upsert: true,
+        contentType: "application/pdf",
+      })
+      if (uploadError) throw uploadError
+
+      // update student profile with storage path
+      const { error: updError } = await supabase
+        .from("student_profiles")
+        .update({ resume_url: storagePath })
+        .eq("user_id", profile.user_id)
+      if (updError) throw updError
+
+      setFormData((prev) => ({ ...prev, resume_url: storagePath }))
+      setResumeFile(null)
+      toast({ title: "Resume uploaded", description: "Your resume has been saved successfully." })
+    } catch (error: any) {
+      toast({ title: "Upload failed", description: error.message, variant: "destructive" })
+    }
+  }
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -541,17 +584,32 @@ export default function Profile() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="resume_url">Resume URL</Label>
-                    <div className="relative">
-                      <FileText className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="resume_url"
-                        type="url"
-                        value={formData.resume_url}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, resume_url: e.target.value }))}
-                        placeholder="https://drive.google.com/your-resume"
-                        className="pl-10"
-                      />
+                    <Label htmlFor="resume_url">Resume</Label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <div className="relative">
+                          <FileText className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="resume_url"
+                            type="text"
+                            value={formData.resume_url}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, resume_url: e.target.value }))}
+                            placeholder="Stored path or external link"
+                            className="pl-10"
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          If uploading below, we'll automatically update this with the storage path.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Input type="file" accept=".pdf" onChange={handleResumeFileChange} />
+                        <Button type="button" variant="outline" onClick={uploadResume}>
+                          <Upload className="h-4 w-4 mr-2" />
+                          Upload PDF
+                        </Button>
+                      </div>
                     </div>
                   </div>
 
