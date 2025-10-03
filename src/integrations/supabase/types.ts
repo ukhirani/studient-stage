@@ -1,4 +1,10 @@
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options
@@ -12,44 +18,47 @@ export type Database = {
         Row: {
           applied_at: string
           cover_letter: string | null
+          current_round: number | null
           id: string
+          mentor_approved_at: string | null
+          mentor_comments: string | null
+          mentor_id: string | null
           opportunity_id: string
+          shortlisted_at: string | null
+          shortlisted_by: string | null
           status: Database["public"]["Enums"]["application_status"]
           student_id: string
           updated_at: string
-          mentor_id: string | null
-          mentor_approved_at: string | null
-          mentor_comments: string | null
-          shortlisted_at: string | null
-          shortlisted_by: string | null
         }
         Insert: {
           applied_at?: string
           cover_letter?: string | null
+          current_round?: number | null
           id?: string
+          mentor_approved_at?: string | null
+          mentor_comments?: string | null
+          mentor_id?: string | null
           opportunity_id: string
+          shortlisted_at?: string | null
+          shortlisted_by?: string | null
           status?: Database["public"]["Enums"]["application_status"]
           student_id: string
           updated_at?: string
-          mentor_id?: string | null
-          mentor_approved_at?: string | null
-          mentor_comments?: string | null
-          shortlisted_at?: string | null
-          shortlisted_by?: string | null
         }
         Update: {
           applied_at?: string
           cover_letter?: string | null
+          current_round?: number | null
           id?: string
+          mentor_approved_at?: string | null
+          mentor_comments?: string | null
+          mentor_id?: string | null
           opportunity_id?: string
+          shortlisted_at?: string | null
+          shortlisted_by?: string | null
           status?: Database["public"]["Enums"]["application_status"]
           student_id?: string
           updated_at?: string
-          mentor_id?: string | null
-          mentor_approved_at?: string | null
-          mentor_comments?: string | null
-          shortlisted_at?: string | null
-          shortlisted_by?: string | null
         }
         Relationships: [
           {
@@ -61,94 +70,72 @@ export type Database = {
           },
         ]
       }
-      companies: {
+      career_log: {
         Row: {
-          id: string
-          name: string
-          description: string | null
-          website: string | null
-          industry: string | null
-          logo_url: string | null
-          contact_email: string | null
-          contact_phone: string | null
-          address: string | null
-          status: Database["public"]["Enums"]["company_status"]
-          verified_by: string | null
-          verified_at: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          description?: string | null
-          website?: string | null
-          industry?: string | null
-          logo_url?: string | null
-          contact_email?: string | null
-          contact_phone?: string | null
-          address?: string | null
-          status?: Database["public"]["Enums"]["company_status"]
-          verified_by?: string | null
-          verified_at?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          description?: string | null
-          website?: string | null
-          industry?: string | null
-          logo_url?: string | null
-          contact_email?: string | null
-          contact_phone?: string | null
-          address?: string | null
-          status?: Database["public"]["Enums"]["company_status"]
-          verified_by?: string | null
-          verified_at?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      recruiter_profiles: {
-        Row: {
-          id: string
-          user_id: string
+          application_id: string | null
+          certificate_id: string | null
           company_id: string | null
-          position: string | null
-          department: string | null
-          is_verified: boolean
-          verification_document_url: string | null
           created_at: string
+          description: string | null
+          end_date: string | null
+          id: string
+          placement_eligible: boolean | null
+          start_date: string | null
+          status: string
+          student_id: string
+          title: string
+          type: string
           updated_at: string
         }
         Insert: {
-          id?: string
-          user_id: string
+          application_id?: string | null
+          certificate_id?: string | null
           company_id?: string | null
-          position?: string | null
-          department?: string | null
-          is_verified?: boolean
-          verification_document_url?: string | null
           created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          placement_eligible?: boolean | null
+          start_date?: string | null
+          status: string
+          student_id: string
+          title: string
+          type: string
           updated_at?: string
         }
         Update: {
-          id?: string
-          user_id?: string
+          application_id?: string | null
+          certificate_id?: string | null
           company_id?: string | null
-          position?: string | null
-          department?: string | null
-          is_verified?: boolean
-          verification_document_url?: string | null
           created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          placement_eligible?: boolean | null
+          start_date?: string | null
+          status?: string
+          student_id?: string
+          title?: string
+          type?: string
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "recruiter_profiles_company_id_fkey"
+            foreignKeyName: "career_log_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_log_certificate_id_fkey"
+            columns: ["certificate_id"]
+            isOneToOne: false
+            referencedRelation: "certificates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_log_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -156,86 +143,223 @@ export type Database = {
           },
         ]
       }
-      mentor_student_assignments: {
+      certificates: {
         Row: {
-          id: string
-          mentor_id: string
-          student_id: string
-          assigned_at: string
-          assigned_by: string | null
-          is_active: boolean
+          application_id: string | null
+          certificate_type: string
+          certificate_url: string | null
+          company_id: string | null
           created_at: string
+          description: string | null
+          id: string
+          issue_date: string
+          issued_by: string | null
+          student_id: string
+          title: string
           updated_at: string
         }
         Insert: {
-          id?: string
-          mentor_id: string
-          student_id: string
-          assigned_at?: string
-          assigned_by?: string | null
-          is_active?: boolean
+          application_id?: string | null
+          certificate_type: string
+          certificate_url?: string | null
+          company_id?: string | null
           created_at?: string
+          description?: string | null
+          id?: string
+          issue_date: string
+          issued_by?: string | null
+          student_id: string
+          title: string
           updated_at?: string
         }
         Update: {
-          id?: string
-          mentor_id?: string
-          student_id?: string
-          assigned_at?: string
-          assigned_by?: string | null
-          is_active?: boolean
+          application_id?: string | null
+          certificate_type?: string
+          certificate_url?: string | null
+          company_id?: string | null
           created_at?: string
+          description?: string | null
+          id?: string
+          issue_date?: string
+          issued_by?: string | null
+          student_id?: string
+          title?: string
           updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "certificates_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      companies: {
+        Row: {
+          address: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          description: string | null
+          id: string
+          industry: string | null
+          logo_url: string | null
+          name: string
+          status: string
+          updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          industry?: string | null
+          logo_url?: string | null
+          name: string
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          industry?: string | null
+          logo_url?: string | null
+          name?: string
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          website?: string | null
         }
         Relationships: []
       }
+      feedback: {
+        Row: {
+          application_id: string
+          areas_for_improvement: string | null
+          comments: string | null
+          communication_rating: number | null
+          created_at: string
+          given_by: string
+          id: string
+          professionalism_rating: number | null
+          rating: number | null
+          strengths: string | null
+          student_id: string
+          technical_skills_rating: number | null
+          updated_at: string
+          would_hire_again: boolean | null
+        }
+        Insert: {
+          application_id: string
+          areas_for_improvement?: string | null
+          comments?: string | null
+          communication_rating?: number | null
+          created_at?: string
+          given_by: string
+          id?: string
+          professionalism_rating?: number | null
+          rating?: number | null
+          strengths?: string | null
+          student_id: string
+          technical_skills_rating?: number | null
+          updated_at?: string
+          would_hire_again?: boolean | null
+        }
+        Update: {
+          application_id?: string
+          areas_for_improvement?: string | null
+          comments?: string | null
+          communication_rating?: number | null
+          created_at?: string
+          given_by?: string
+          id?: string
+          professionalism_rating?: number | null
+          rating?: number | null
+          strengths?: string | null
+          student_id?: string
+          technical_skills_rating?: number | null
+          updated_at?: string
+          would_hire_again?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       interviews: {
         Row: {
-          id: string
           application_id: string
-          scheduled_date: string
-          scheduled_time: string
+          created_at: string
+          created_by: string
           duration_minutes: number | null
-          mode: Database["public"]["Enums"]["interview_mode"] | null
+          feedback: string | null
+          id: string
           location: string | null
           meeting_link: string | null
-          status: Database["public"]["Enums"]["interview_status"]
+          mode: string | null
           notes: string | null
-          feedback: string | null
-          created_by: string
-          created_at: string
+          scheduled_date: string
+          scheduled_time: string
+          status: string
           updated_at: string
         }
         Insert: {
-          id?: string
           application_id: string
-          scheduled_date: string
-          scheduled_time: string
+          created_at?: string
+          created_by: string
           duration_minutes?: number | null
-          mode?: Database["public"]["Enums"]["interview_mode"] | null
+          feedback?: string | null
+          id?: string
           location?: string | null
           meeting_link?: string | null
-          status?: Database["public"]["Enums"]["interview_status"]
+          mode?: string | null
           notes?: string | null
-          feedback?: string | null
-          created_by: string
-          created_at?: string
+          scheduled_date: string
+          scheduled_time: string
+          status?: string
           updated_at?: string
         }
         Update: {
-          id?: string
           application_id?: string
-          scheduled_date?: string
-          scheduled_time?: string
+          created_at?: string
+          created_by?: string
           duration_minutes?: number | null
-          mode?: Database["public"]["Enums"]["interview_mode"] | null
+          feedback?: string | null
+          id?: string
           location?: string | null
           meeting_link?: string | null
-          status?: Database["public"]["Enums"]["interview_status"]
+          mode?: string | null
           notes?: string | null
-          feedback?: string | null
-          created_by?: string
-          created_at?: string
+          scheduled_date?: string
+          scheduled_time?: string
+          status?: string
           updated_at?: string
         }
         Relationships: [
@@ -248,237 +372,99 @@ export type Database = {
           },
         ]
       }
-      certificates: {
+      mentor_student_assignments: {
         Row: {
+          assigned_at: string
+          assigned_by: string | null
+          created_at: string
           id: string
+          is_active: boolean
+          mentor_id: string
           student_id: string
-          application_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          mentor_id: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          mentor_id?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      offer_letters: {
+        Row: {
+          application_id: string
           company_id: string | null
-          certificate_type: Database["public"]["Enums"]["certificate_type"]
-          title: string
-          description: string | null
-          issue_date: string
-          certificate_url: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          issued_at: string
           issued_by: string | null
-          created_at: string
+          joining_date: string | null
+          offer_letter_url: string | null
+          offer_type: string
+          position: string
+          salary_amount: number | null
+          status: string
+          student_id: string
           updated_at: string
         }
         Insert: {
-          id?: string
-          student_id: string
-          application_id?: string | null
-          company_id?: string | null
-          certificate_type: Database["public"]["Enums"]["certificate_type"]
-          title: string
-          description?: string | null
-          issue_date: string
-          certificate_url?: string | null
-          issued_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          student_id?: string
-          application_id?: string | null
-          company_id?: string | null
-          certificate_type?: Database["public"]["Enums"]["certificate_type"]
-          title?: string
-          description?: string | null
-          issue_date?: string
-          certificate_url?: string | null
-          issued_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "certificates_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      career_log: {
-        Row: {
-          id: string
-          student_id: string
-          application_id: string | null
-          company_id: string | null
-          type: Database["public"]["Enums"]["career_log_type"]
-          title: string
-          description: string | null
-          start_date: string | null
-          end_date: string | null
-          status: Database["public"]["Enums"]["career_log_status"]
-          placement_eligible: boolean
-          certificate_id: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          student_id: string
-          application_id?: string | null
-          company_id?: string | null
-          type: Database["public"]["Enums"]["career_log_type"]
-          title: string
-          description?: string | null
-          start_date?: string | null
-          end_date?: string | null
-          status: Database["public"]["Enums"]["career_log_status"]
-          placement_eligible?: boolean
-          certificate_id?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          student_id?: string
-          application_id?: string | null
-          company_id?: string | null
-          type?: Database["public"]["Enums"]["career_log_type"]
-          title?: string
-          description?: string | null
-          start_date?: string | null
-          end_date?: string | null
-          status?: Database["public"]["Enums"]["career_log_status"]
-          placement_eligible?: boolean
-          certificate_id?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "career_log_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "career_log_certificate_id_fkey"
-            columns: ["certificate_id"]
-            isOneToOne: false
-            referencedRelation: "certificates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      feedback: {
-        Row: {
-          id: string
           application_id: string
-          student_id: string
-          given_by: string
-          rating: number | null
-          technical_skills_rating: number | null
-          communication_rating: number | null
-          professionalism_rating: number | null
-          comments: string | null
-          strengths: string | null
-          areas_for_improvement: string | null
-          would_hire_again: boolean | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          application_id: string
-          student_id: string
-          given_by: string
-          rating?: number | null
-          technical_skills_rating?: number | null
-          communication_rating?: number | null
-          professionalism_rating?: number | null
-          comments?: string | null
-          strengths?: string | null
-          areas_for_improvement?: string | null
-          would_hire_again?: boolean | null
+          company_id?: string | null
           created_at?: string
+          expires_at?: string | null
+          id?: string
+          issued_at?: string
+          issued_by?: string | null
+          joining_date?: string | null
+          offer_letter_url?: string | null
+          offer_type: string
+          position: string
+          salary_amount?: number | null
+          status?: string
+          student_id: string
           updated_at?: string
         }
         Update: {
-          id?: string
           application_id?: string
-          student_id?: string
-          given_by?: string
-          rating?: number | null
-          technical_skills_rating?: number | null
-          communication_rating?: number | null
-          professionalism_rating?: number | null
-          comments?: string | null
-          strengths?: string | null
-          areas_for_improvement?: string | null
-          would_hire_again?: boolean | null
+          company_id?: string | null
           created_at?: string
+          expires_at?: string | null
+          id?: string
+          issued_at?: string
+          issued_by?: string | null
+          joining_date?: string | null
+          offer_letter_url?: string | null
+          offer_type?: string
+          position?: string
+          salary_amount?: number | null
+          status?: string
+          student_id?: string
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "feedback_application_id_fkey"
+            foreignKeyName: "offer_letters_application_id_fkey"
             columns: ["application_id"]
             isOneToOne: false
             referencedRelation: "applications"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      offer_letters: {
-        Row: {
-          id: string
-          application_id: string
-          student_id: string
-          company_id: string | null
-          offer_type: Database["public"]["Enums"]["offer_type"]
-          position: string
-          salary_amount: number | null
-          joining_date: string | null
-          offer_letter_url: string | null
-          status: Database["public"]["Enums"]["offer_status"]
-          issued_by: string | null
-          issued_at: string
-          expires_at: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          application_id: string
-          student_id: string
-          company_id?: string | null
-          offer_type: Database["public"]["Enums"]["offer_type"]
-          position: string
-          salary_amount?: number | null
-          joining_date?: string | null
-          offer_letter_url?: string | null
-          status?: Database["public"]["Enums"]["offer_status"]
-          issued_by?: string | null
-          issued_at?: string
-          expires_at?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          application_id?: string
-          student_id?: string
-          company_id?: string | null
-          offer_type?: Database["public"]["Enums"]["offer_type"]
-          position?: string
-          salary_amount?: number | null
-          joining_date?: string | null
-          offer_letter_url?: string | null
-          status?: Database["public"]["Enums"]["offer_status"]
-          issued_by?: string | null
-          issued_at?: string
-          expires_at?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
           {
             foreignKeyName: "offer_letters_company_id_fkey"
             columns: ["company_id"]
@@ -490,12 +476,14 @@ export type Database = {
       }
       opportunities: {
         Row: {
+          company_id: string | null
           company_name: string
           created_at: string
           deadline: string | null
           departments: string[] | null
           description: string
           id: string
+          interview_rounds: Json | null
           is_active: boolean
           location: string | null
           min_cgpa: number | null
@@ -505,15 +493,16 @@ export type Database = {
           title: string
           type: Database["public"]["Enums"]["opportunity_type"]
           updated_at: string
-          company_id: string | null
         }
         Insert: {
+          company_id?: string | null
           company_name: string
           created_at?: string
           deadline?: string | null
           departments?: string[] | null
           description: string
           id?: string
+          interview_rounds?: Json | null
           is_active?: boolean
           location?: string | null
           min_cgpa?: number | null
@@ -523,15 +512,16 @@ export type Database = {
           title: string
           type?: Database["public"]["Enums"]["opportunity_type"]
           updated_at?: string
-          company_id?: string | null
         }
         Update: {
+          company_id?: string | null
           company_name?: string
           created_at?: string
           deadline?: string | null
           departments?: string[] | null
           description?: string
           id?: string
+          interview_rounds?: Json | null
           is_active?: boolean
           location?: string | null
           min_cgpa?: number | null
@@ -541,7 +531,6 @@ export type Database = {
           title?: string
           type?: Database["public"]["Enums"]["opportunity_type"]
           updated_at?: string
-          company_id?: string | null
         }
         Relationships: [
           {
@@ -555,36 +544,89 @@ export type Database = {
       }
       profiles: {
         Row: {
+          company_name: string | null
           created_at: string
           email: string
           full_name: string
           id: string
+          industry: string | null
+          is_verified: boolean | null
           phone: string | null
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string
           user_id: string
         }
         Insert: {
+          company_name?: string | null
           created_at?: string
           email: string
           full_name: string
           id?: string
+          industry?: string | null
+          is_verified?: boolean | null
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
           user_id: string
         }
         Update: {
+          company_name?: string | null
           created_at?: string
           email?: string
           full_name?: string
           id?: string
+          industry?: string | null
+          is_verified?: boolean | null
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      recruiter_profiles: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          department: string | null
+          id: string
+          is_verified: boolean
+          position: string | null
+          updated_at: string
+          user_id: string
+          verification_document_url: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          department?: string | null
+          id?: string
+          is_verified?: boolean
+          position?: string | null
+          updated_at?: string
+          user_id: string
+          verification_document_url?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          department?: string | null
+          id?: string
+          is_verified?: boolean
+          position?: string | null
+          updated_at?: string
+          user_id?: string
+          verification_document_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recruiter_profiles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       student_profiles: {
         Row: {
@@ -637,34 +679,34 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      is_verified_recruiter: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       application_status:
         | "pending"
         | "under_review"
+        | "shortlisted"
+        | "selected"
+        | "rejected"
         | "mentor_pending"
         | "mentor_approved"
         | "mentor_rejected"
-        | "shortlisted"
         | "interview_scheduled"
-        | "selected"
-        | "rejected"
         | "offer_extended"
         | "offer_accepted"
         | "offer_rejected"
         | "placed"
         | "internship_ongoing"
         | "internship_completed"
-      company_status: "pending" | "verified" | "rejected"
-      interview_mode: "online" | "offline" | "phone"
-      interview_status: "scheduled" | "confirmed" | "completed" | "cancelled" | "rescheduled"
-      certificate_type: "internship" | "placement" | "training" | "achievement"
-      career_log_type: "internship" | "placement" | "training" | "achievement"
-      career_log_status: "ongoing" | "completed" | "cancelled"
-      offer_type: "internship" | "full_time" | "part_time" | "ppo"
-      offer_status: "pending" | "accepted" | "rejected" | "expired"
       opportunity_type: "internship" | "full_time" | "part_time" | "placement"
-      user_role: "student" | "placement_officer" | "faculty_mentor" | "recruiter"
+      user_role:
+        | "student"
+        | "placement_officer"
+        | "faculty_mentor"
+        | "recruiter"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -695,8 +737,10 @@ export type Tables<
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] & DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -704,7 +748,9 @@ export type Tables<
     : never
 
 export type TablesInsert<
-  DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
@@ -727,7 +773,9 @@ export type TablesInsert<
     : never
 
 export type TablesUpdate<
-  DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
@@ -750,7 +798,9 @@ export type TablesUpdate<
     : never
 
 export type Enums<
-  DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"] | { schema: keyof DatabaseWithoutInternals },
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
@@ -787,13 +837,13 @@ export const Constants = {
       application_status: [
         "pending",
         "under_review",
+        "shortlisted",
+        "selected",
+        "rejected",
         "mentor_pending",
         "mentor_approved",
         "mentor_rejected",
-        "shortlisted",
         "interview_scheduled",
-        "selected",
-        "rejected",
         "offer_extended",
         "offer_accepted",
         "offer_rejected",
@@ -801,16 +851,13 @@ export const Constants = {
         "internship_ongoing",
         "internship_completed",
       ],
-      company_status: ["pending", "verified", "rejected"],
-      interview_mode: ["online", "offline", "phone"],
-      interview_status: ["scheduled", "confirmed", "completed", "cancelled", "rescheduled"],
-      certificate_type: ["internship", "placement", "training", "achievement"],
-      career_log_type: ["internship", "placement", "training", "achievement"],
-      career_log_status: ["ongoing", "completed", "cancelled"],
-      offer_type: ["internship", "full_time", "part_time", "ppo"],
-      offer_status: ["pending", "accepted", "rejected", "expired"],
       opportunity_type: ["internship", "full_time", "part_time", "placement"],
-      user_role: ["student", "placement_officer", "faculty_mentor", "recruiter"],
+      user_role: [
+        "student",
+        "placement_officer",
+        "faculty_mentor",
+        "recruiter",
+      ],
     },
   },
 } as const
