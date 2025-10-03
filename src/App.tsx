@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { BrowserRouter, Routes, Route } from "react-router-dom"
 import { ThemeProvider } from "@/components/theme-provider"
+import { DummyAuthProvider } from "@/contexts/DummyAuthContext"
 import { AuthForm } from "@/components/auth/AuthForm"
 import { AppLayout } from "@/components/layout/AppLayout"
 import Dashboard from "@/pages/Dashboard"
@@ -29,14 +30,15 @@ const queryClient = new QueryClient()
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider defaultTheme="light" storageKey="campus-connect-theme">
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<AuthForm />} />
-            <Route path="/" element={<AppLayout />}>
+      <DummyAuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<AuthForm />} />
+              <Route path="/" element={<AppLayout />}>
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="opportunities" element={<Opportunities />} />
               <Route path="opportunities/new" element={<CreateOpportunity />} />
@@ -59,7 +61,8 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
-      </TooltipProvider>
+        </TooltipProvider>
+      </DummyAuthProvider>
     </ThemeProvider>
   </QueryClientProvider>
 )

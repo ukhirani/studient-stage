@@ -32,7 +32,7 @@ import {
   Building2,
   CheckCircle,
 } from "lucide-react"
-import { supabase } from "@/integrations/supabase/client"
+import { useDummyAuth } from "@/contexts/DummyAuthContext"
 import { useToast } from "@/hooks/use-toast"
 
 interface SidebarProps {
@@ -58,9 +58,20 @@ const menuItems = {
     { title: "Applications", url: "/applications", icon: FileText },
     { title: "Analytics", url: "/analytics", icon: BarChart3 },
   ],
+  admin: [
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    { title: "Company Management", url: "/companies", icon: Building2 },
+    { title: "User Management", url: "/users", icon: Shield },
+    { title: "Verify Recruiters", url: "/verify-recruiters", icon: CheckCircle },
+    { title: "Students", url: "/students", icon: Users },
+    { title: "Applications", url: "/applications", icon: FileText },
+    { title: "Certificates", url: "/certificates", icon: Award },
+    { title: "Analytics", url: "/analytics", icon: BarChart3 },
+  ],
   faculty_mentor: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     { title: "My Students", url: "/students", icon: Users },
+    { title: "Applications", url: "/applications", icon: FileText },
     { title: "Feedback", url: "/feedback", icon: MessageSquare },
     { title: "Schedule", url: "/schedule", icon: Calendar },
     { title: "Profile", url: "/profile", icon: User },
@@ -79,6 +90,7 @@ const menuItems = {
 const roleDisplayNames = {
   student: "Student",
   placement_officer: "Admin",
+  admin: "Admin",
   faculty_mentor: "Faculty Mentor",
   recruiter: "Recruiter",
 }
@@ -86,6 +98,7 @@ const roleDisplayNames = {
 const roleIcons = {
   student: GraduationCap,
   placement_officer: Shield,
+  admin: Shield,
   faculty_mentor: UserCheck,
   recruiter: Building,
 }
@@ -101,6 +114,7 @@ export function AppSidebar({ userRole, userName }: SidebarProps) {
   const items = menuItems[userRole as keyof typeof menuItems] || []
   const RoleIcon = roleIcons[userRole as keyof typeof roleIcons] || User
   const roleDisplayName = roleDisplayNames[userRole as keyof typeof roleDisplayNames] || userRole
+  const { signOut } = useDummyAuth()
 
   const isActive = (path: string) => currentPath === path
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
@@ -110,8 +124,7 @@ export function AppSidebar({ userRole, userName }: SidebarProps) {
 
   const handleSignOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
+      await signOut()
 
       toast({
         title: "Signed out successfully",
